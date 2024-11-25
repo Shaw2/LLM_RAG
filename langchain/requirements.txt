@@ -1,0 +1,13 @@
+langchain
+langchain_community  
+transformers
+torch
+sentencepiece
+fastapi
+uvicorn
+pydantic
+requests
+gunicorn
+protobuf==3.20.1
+pymilvus
+langchain-milvus
