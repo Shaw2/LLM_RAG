@@ -2,20 +2,27 @@
 메인 실행 파일
 '''
 # main.py
+from config.config import MILVUS_HOST, MILVUS_PORT
 from pipelines.content_chain import ContentChain
 from utils.helpers import languagechecker, insert_data, create_collection, search_data
 from utils.ollama_embedding import get_embedding_from_ollama, get_embedding_from_ollama
+from utils.ollama_client import OllamaClient
+from utils.RAGChain import CustomRAGChain
 from fastapi import FastAPI, HTTPException, Body
 from fastapi.responses import StreamingResponse
+from langchain.vectorstores import Milvus
+from langchain.prompts import PromptTemplate
+from langchain.chains import RetrievalQA
+from pymilvus import connections, Collection, utility
 from typing import AsyncGenerator, List
 from pydantic import BaseModel
 from typing import Dict
-from langchain.vectorstores import Milvus
-from config.config import MILVUS_HOST, MILVUS_PORT
-from pymilvus import connections, FieldSchema, CollectionSchema, DataType, Collection
 
 
 app = FastAPI()
+
+connections.connect(host="172.19.0.6", port="19530")
+
 # ContentChain 초기화
 content_chain = ContentChain()
 
@@ -54,6 +61,91 @@ async def generate(request: GenerateRequest):
         print(f"Error: {str(e)}")
         return {"error": str(e)}
 
+@app.post("/api/generate_RAG")
+async def generate_RAG(request: GenerateRequest):
+    try:
+        # 입력 텍스트
+        input_text = request.input_text
+
+        # 언어 감지
+        discriminant = languagechecker(input_text)
+        print(discriminant, "<===진행")
+
+        # OllamaClient로 임베딩 생성 (언어에 따라 번역 포함)
+        if discriminant:
+            translated_text = content_chain.ko_en_translator.translate(input_text)
+            query_embedding = get_embedding_from_ollama(translated_text)
+        else:
+            query_embedding = get_embedding_from_ollama(input_text)
+
+        # Milvus 벡터 스토어 초기화 (컬렉션 이름, 임베딩 함수 및 연결 정보 제공)
+        collection = Collection("ko_std_industry_collection")
+        print(collection.describe())
+        print(collection,"<=====connection")
+        milvus_store = Milvus(
+            collection_name="ko_std_industry_collection",
+            embedding_function=get_embedding_from_ollama,  # 사용하려는 임베딩 함수
+            connection_args={"host": "172.19.0.6", "port": "19530"}
+        )
+        print("milvus_store")
+        search_params = {
+            "metric_type": "L2",
+            "params": {"nprobe": 10}
+        }
+
+        print("search_params")
+        output_fields = ["question", "answer"]
+
+        results = collection.search(
+            data=[query_embedding],
+            anns_field="question_embedding",
+            param=search_params,
+            limit=3,
+            expr=None,
+            output_fields=output_fields
+        )
+
+        print("results")
+        print("milvus 관련 설정 완료")
+        # 검색된 문서로 컨텍스트 구성
+        retrieved_context = ""
+        for hits in results:
+            for hit in hits:
+                retrieved_context += f"Q: {hit.entity.get('question')}\nA: {hit.entity.get('answer')}\n\n"
+
+        print(f"Retrieved Context: {retrieved_context}")
+
+        # Ollama API를 사용하여 최종 생성 수행
+        prompt_template = PromptTemplate(
+            input_variables=["context", "question"],
+            template="""
+            Use the following context to answer the question:
+            Context:
+            {context}
+
+            Question:
+            {question}
+            """
+        )
+        # OllamaClient로 LLM 호출
+        ollama_llm = OllamaClient()  # OllamaClient 객체 생성
+        print("ollama client 객체 생성 완료")
+
+        # CustomRAGChain 생성
+        custom_chain = CustomRAGChain(
+            retriever=milvus_store.as_retriever(),
+            llm=ollama_llm,  # OllamaClient를 LLM로 사용
+            prompt_template=prompt_template
+        )
+        print("custom chain 생성 완료")
+        # CustomRAGChain을 사용하여 최종 응답 생성
+        response = custom_chain({"question": input_text})
+
+        return {"response": response["answer"]}
+
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        return {"error": str(e)}
 # API 엔드포인트 streaming 방식
 # @app.post("/generate")
 # async def generate(request: GenerateRequest):
@@ -96,32 +188,50 @@ async def healthcheck():
 
 @app.get("/check")
 def check_schema_db():
-    connections.connect(host="172.19.0.6", port="19530")
     collection = Collection("ko_std_industry_collection")
     return collection.schema
 
-@app.get("/api/db_connection")
-def DB_connection():
-    connections.connect(host="172.19.0.6", port="19530")
-    collection = Collection("ko_std_industry_collection")
-    return collection
+class DBCreateRequest(BaseModel):
+    name: str
 
-@app.post("/api/db_create")    
-def vectorDB_create(name: str = Body(...)):
-    collection = create_collection(name)
-    return {"status": "success", "collection_name": name}
+@app.post("/api/db_create")
+def vectorDB_create(request: DBCreateRequest):
+    collection = create_collection(request.name)
+    return {"status": "success", "collection_name": request.name}
 
 class InsertRequest(BaseModel):
     question: str
     answer: str
     metadata: Dict[str, str]
-
+    
 
 @app.post('/api/insert')
 def insert_data(request: InsertRequest):
     
     try:
-        collection = Collection("ko_std_industry_collection")
+        collection_name = "ko_std_industry_collection"
+        def check_collection_exists(collection_name: str) -> bool:
+            """
+            Checks if a collection exists in Milvus.
+            
+            Args:
+                collection_name (str): The name of the collection to check.
+            
+            Returns:
+                bool: True if the collection exists, False otherwise.
+            """
+            try:
+                # Check if the collection exists
+                return utility.has_collection(collection_name)
+            except Exception as e:
+                print(f"Error checking collection existence: {str(e)}")
+                return False
+        # Check if the collection exists, create if it doesn't
+        if not check_collection_exists(collection_name):
+            create_collection(collection_name)
+
+        # Access the collection
+        collection = Collection(collection_name)
         def process_text(text: str) -> List[float]:
             discriminant = languagechecker(text)
             if discriminant:
@@ -140,19 +250,15 @@ def insert_data(request: InsertRequest):
 
         # 질문 및 답변 임베딩 처리
         question_embedding = process_text(request.question)
-        answer_embedding = process_text(request.answer)
-
         # 임베딩 유효성 확인
         if not question_embedding or len(question_embedding) != 768:
             raise ValueError("Invalid question embedding dimension.")
-        if not answer_embedding or len(answer_embedding) != 768:
-            raise ValueError("Invalid answer embedding dimension.")
 
         # 데이터 준비
         questions = [request.question]
         answers = [request.answer]
         embeddings_question = [question_embedding]
-        embeddings_answer = [answer_embedding]
+
 
 
         # metadata 데이터 추출
@@ -173,7 +279,6 @@ def insert_data(request: InsertRequest):
             questions,
             answers,
             embeddings_question,
-            embeddings_answer,
             First_Category,
             Second_Category,
             Third_Category,
@@ -188,14 +293,14 @@ def insert_data(request: InsertRequest):
         # 데이터 삽입
         collection.insert(data)
 
-        # 인덱스 생성 (처음 한 번만 수행)
-        if not collection.has_index():
-            index_params = {
-                "index_type": "IVF_FLAT",
-                "metric_type": "L2",
-                "params": {"nlist": 128}
-            }
-            collection.create_index(field_name="embedding", index_params=index_params)
+        # # 인덱스 생성 (처음 한 번만 수행)
+        # if not collection.has_index():
+        #     index_params = {
+        #         "index_type": "IVF_FLAT",
+        #         "metric_type": "L2",
+        #         "params": {"nlist": 128}
+        #     }
+        #     collection.create_index(field_name="question_embedding", index_params=index_params)
 
         # 컬렉션 로드
         collection.load()
@@ -207,17 +312,58 @@ def insert_data(request: InsertRequest):
         raise HTTPException(status_code=500, detail=f"Failed to insert data: {str(e)}")
 
 
+class SearchRequest(BaseModel):
+    input_text: str
+    collection: str  # 컬렉션 이름
+    question: str  # 질문
 
-
-    
 @app.post("/api/search")
-def search_endpoint():
-    # 컬렉션이 로드되어 있는지 확인하고, 로드되지 않았다면 로드
-    collection = "ko_std_industry_collection"
+async def search_data(request: SearchRequest):
+    try:
+        # 입력 텍스트
+        input_text = request.input_text
+        collection_name = request.collection
+        question = request.question
 
-    # 데이터 검색
-    result = search_data(collection)
-    return {"results": result}
+        # 언어 감지 및 임베딩 생성
+        discriminant = languagechecker(input_text)
+        if discriminant:
+            translated_text = content_chain.ko_en_translator.translate(input_text)
+            query_embedding = get_embedding_from_ollama(translated_text)
+        else:
+            query_embedding = get_embedding_from_ollama(input_text)
+
+        # 컬렉션 접근
+        collection = Collection(collection_name)
+
+        # 검색 파라미터 설정
+        search_params = {
+            "metric_type": "L2",  # L2 거리 측정 방식 (유클리드 거리)
+            "params": {"nprobe": 10}  # nprobe는 검색 정확도와 관련
+        }
+
+        # 검색
+        results = collection.search(
+            data=[query_embedding],  # 검색할 임베딩
+            anns_field="question_embedding",  # 임베딩 필드
+            param=search_params,
+            limit=3,  # 상위 3개의 결과만 반환
+            output_fields=["question", "answer"]  # 반환할 필드
+        )
+
+        # 검색 결과
+        retrieved_context = ""
+        for hits in results:
+            for hit in hits:
+                retrieved_context += f"Q: {hit.entity.get('question')}\nA: {hit.entity.get('answer')}\n\n"
+
+        # 응답 반환
+        return {"retrieved_context": retrieved_context}
+
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        return {"error": str(e)}
+
 
 @app.post("/api/test_search")
 def search_test():
@@ -243,9 +389,22 @@ def search_test():
 
     return results
 
+
+class QuestionSearchRequest(BaseModel):
+    collection: str
+    question: str
+    
 @app.post("/api/question_search")
-def search_by_question(collection, query_text):
-    def process_text(text: str) -> List[float]:
+def search_by_question(request: QuestionSearchRequest):
+    try:
+        collection_name = request.collection
+        question = request.question
+        print(collection_name, question)
+
+        collection = Collection(collection_name)
+
+        # 텍스트 처리 및 임베딩 생성
+        def process_text(text: str) -> List[float]:
             discriminant = languagechecker(text)
             if discriminant:
                 translated_text = content_chain.ko_en_translator.translate(text)
@@ -261,8 +420,20 @@ def search_by_question(collection, query_text):
             print(f"[DEBUG] Generated Embedding Length: {len(embedding)}")
             return embedding
 
-    query_embedding = process_text(query_text)
-    output_fields = ["question",
+        query_embedding = process_text(question)
+
+        # 임베딩 유효성 확인
+        if not query_embedding or len(query_embedding) != 768:
+            raise ValueError("Invalid query embedding dimension.")
+
+        # 검색 파라미터 설정 (예: IVF_FLAT 인덱스 사용 시)
+        search_params = {
+            "metric_type": "L2",
+            "params": {"nprobe": 10}
+        }
+
+        output_fields = [
+            "question",
             "answer",
             "First_Category",
             "Second_Category",
@@ -272,19 +443,42 @@ def search_by_question(collection, query_text):
             "Menu",
             "est_date",
             "corp_name",
-            "question_template"]
-    # 검색 파라미터 설정 (예: IVF_FLAT 인덱스 사용 시)
-    search_params = {
-        "metric_type": "L2",
-        "params": {"nprobe": 10}
-    }
-    results = collection.search(
-        data=[query_embedding],
-        anns_field="question_embedding",
-        param=search_params,
-        limit=3,
-        expr=None,
-        output_fields=output_fields
-    )
+            "question_template"
+        ]
 
-    return results
+        # 검색 수행
+        results = collection.search(
+            data=[query_embedding],
+            anns_field="question_embedding",
+            param=search_params,
+            limit=3,
+            expr=None,
+            output_fields=output_fields
+        )
+
+        # 검색 결과 처리
+        result_data = []
+        for hits in results:
+            for hit in hits:
+                result_data.append({
+                    "id": hit.id,
+                    "distance": hit.distance,
+                    "question": hit.entity.get("question"),
+                    "answer": hit.entity.get("answer"),
+                    "First_Category": hit.entity.get("First_Category"),
+                    "Second_Category": hit.entity.get("Second_Category"),
+                    "Third_Category": hit.entity.get("Third_Category"),
+                    "Fourth_Category": hit.entity.get("Fourth_Category"),
+                    "Fifth_Category": hit.entity.get("Fifth_Category"),
+                    "Menu": hit.entity.get("Menu"),
+                    "est_date": hit.entity.get("est_date"),
+                    "corp_name": hit.entity.get("corp_name"),
+                    "question_template": hit.entity.get("question_template")
+                })
+
+        return {"results": result_data}
+
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
