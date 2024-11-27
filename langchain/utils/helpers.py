@@ -27,47 +27,62 @@ def languagechecker(text):
 # ==============================================================================================================
 # 컬렉션 생성 함수
 
-
-
 connections.connect(host='172.19.0.6', port='19530')
 def create_collection(name: str):
-    collection_name = name
+    try:
+        collection_name = name
 
-    #기존 컬렉션이 있으면 삭제
-    if utility.has_collection(collection_name):
-        utility.drop_collection(collection_name)
-        print(f"Collection '{collection_name}' has been dropped.")
-        # 필드 스키마 정의
-    id_field = FieldSchema(name="id", dtype=DataType.INT64, is_primary=True, auto_id=True)
-    question_field = FieldSchema(name="question", dtype=DataType.VARCHAR, max_length=1000)
-    answer_field = FieldSchema(name="answer", dtype=DataType.VARCHAR, max_length=10000)
-    question_embedding_field = FieldSchema(name="question_embedding", dtype=DataType.FLOAT_VECTOR, dim=768)
-    answer_embedding_field = FieldSchema(name="answer_embedding", dtype=DataType.FLOAT_VECTOR, dim=768)
+                # 컬렉션이 존재하면 삭제
+        if utility.has_collection(collection_name):
+            utility.drop_collection(collection_name)
+            print(f"Collection '{collection_name}' has been dropped.")
 
+        # 스키마 정의
+        id_field = FieldSchema(name="id", dtype=DataType.INT64, is_primary=True, auto_id=True)
+        question_field = FieldSchema(name="question", dtype=DataType.VARCHAR, max_length=1000)
+        answer_field = FieldSchema(name="answer", dtype=DataType.VARCHAR, max_length=10000)
+        question_embedding_field = FieldSchema(name="question_embedding", dtype=DataType.FLOAT_VECTOR, dim=768)
 
-    # metadata 필드 추가
-    metadata_fields = [
-        FieldSchema(name="First_Category", dtype=DataType.VARCHAR, max_length=100),
-        FieldSchema(name="Second_Category", dtype=DataType.VARCHAR, max_length=100),
-        FieldSchema(name="Third_Category", dtype=DataType.VARCHAR, max_length=100),
-        FieldSchema(name="Fourth_Category", dtype=DataType.VARCHAR, max_length=100),
-        FieldSchema(name="Fifth_Category", dtype=DataType.VARCHAR, max_length=100),
-        FieldSchema(name="Menu", dtype=DataType.VARCHAR, max_length=100),
-        FieldSchema(name="est_date", dtype=DataType.VARCHAR, max_length=20),
-        FieldSchema(name="corp_name", dtype=DataType.VARCHAR, max_length=100),
-        FieldSchema(name="question_template", dtype=DataType.VARCHAR, max_length=100)
-    ]
+        # metadata 필드 추가
+        metadata_fields = [
+            FieldSchema(name="First_Category", dtype=DataType.VARCHAR, max_length=100),
+            FieldSchema(name="Second_Category", dtype=DataType.VARCHAR, max_length=100),
+            FieldSchema(name="Third_Category", dtype=DataType.VARCHAR, max_length=100),
+            FieldSchema(name="Fourth_Category", dtype=DataType.VARCHAR, max_length=100),
+            FieldSchema(name="Fifth_Category", dtype=DataType.VARCHAR, max_length=100),
+            FieldSchema(name="Menu", dtype=DataType.VARCHAR, max_length=100),
+            FieldSchema(name="est_date", dtype=DataType.VARCHAR, max_length=20),
+            FieldSchema(name="corp_name", dtype=DataType.VARCHAR, max_length=100),
+            FieldSchema(name="question_template", dtype=DataType.VARCHAR, max_length=100)
+        ]
 
-    # 모든 필드를 포함하여 컬렉션 스키마 생성
-    schema = CollectionSchema(
-        fields=[id_field, question_field, answer_field, question_embedding_field, answer_embedding_field] + metadata_fields,
-        description="QA collection with metadata"
-    )
+        # 스키마 생성
+        schema = CollectionSchema(
+            fields=[id_field, question_field, answer_field, question_embedding_field] + metadata_fields,
+            description="QA collection with metadata"
+        )
 
-    # 컬렉션 생성 또는 업데이트
-    collection = Collection(name=collection_name, schema=schema)
-    print(f"Collection '{collection_name}' created successfully.")
-    return collection
+        # 컬렉션 생성
+        collection = Collection(name=collection_name, schema=schema)
+        print(f"Collection '{collection_name}' created successfully.")
+
+        # 인덱스 생성 (처음 한 번만 수행)
+        if not collection.has_index():
+            index_params = {
+                "index_type": "IVF_FLAT",  # 사용할 인덱스 유형
+                "metric_type": "L2",       # 거리 측정 방식
+                "params": {"nlist": 128}   # 인덱스 생성 파라미터
+            }
+            collection.create_index(field_name="question_embedding", index_params=index_params)  # 인덱스 생성
+            print(f"Index created for 'question_embedding' field.")
+
+        return collection
+
+    except Exception as e:
+        # 에러 발생 시 처리
+        print(f"Error: {str(e)}")
+        return {"error": str(e)}
+
 
 
 

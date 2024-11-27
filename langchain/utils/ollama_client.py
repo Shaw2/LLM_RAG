@@ -5,7 +5,6 @@ class OllamaClient:
     def __init__(self, api_url=OLLAMA_API_URL+'api/generate'):
         self.api_url = api_url
 
-    # 일괄 처리 방식
     def generate(self, model: str, prompt: str) -> str:
         """
         Ollama API를 사용하여 텍스트 생성
@@ -20,18 +19,12 @@ class OllamaClient:
             "model": model,
             "prompt": prompt
         }
-        print("check payload")
+
         try:
-            # Ollama API 요청
-            print(self.api_url, payload, "response")
             response = requests.post(self.api_url, json=payload)
             response.raise_for_status()  # HTTP 에러 발생 시 예외 처리
-            
-            # JSON 응답 파싱
+
             full_response = response.text  # 전체 응답
-            print("Full response content:", full_response)  # 디버깅용
-            
-            # 여러 JSON 객체가 하나의 문자열로 이어졌을 수 있으므로 분리
             lines = full_response.splitlines()
             all_text = ""
             for line in lines:
@@ -39,14 +32,14 @@ class OllamaClient:
                     json_line = json.loads(line.strip())  # 각 줄을 JSON 파싱
                     all_text += json_line.get("response", "")
                 except json.JSONDecodeError as e:
-                    print(f"Invalid JSON line skipped: {line}, Error: {e}")
-                    continue
+                    continue  # JSON 파싱 오류 시 건너뛰기
 
             return all_text.strip() if all_text else "Empty response received"
 
         except requests.exceptions.RequestException as e:
             print(f"HTTP 요청 실패: {e}")
             raise RuntimeError(f"Ollama API 요청 실패: {e}")
+
 
     # streaming 방식
     # def generate(self, model: str, prompt: str) -> str:

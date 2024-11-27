@@ -12,35 +12,35 @@ class TextData(BaseModel):
     answer: str
     metadata: dict
 
-def get_embedding_from_ollama(text: str) -> List[float]:
-    headers = {
-        "Content-Type": "application/json"
-    }
+# def get_embedding_from_ollama(text: str) -> List[float]:
+#     headers = {
+#         "Content-Type": "application/json"
+#     }
 
-    data = {
-        "model": "nomic-embed-text",  # 사용하려는 모델 이름
-        "input": text  # 임베딩할 텍스트
-    }
-    print(f"Input text: {text}")
+#     data = {
+#         "model": "nomic-embed-text",  # 사용하려는 모델 이름
+#         "input": text  # 임베딩할 텍스트
+#     }
+#     print(f"Input text: {text}")
 
-    # Ollama API에 POST 요청
-    try:
-        response = requests.post(OLLAMA_API_URL + 'api/embeddings', headers=headers, json=data)
-        print(response, "<=====response")
+#     # Ollama API에 POST 요청
+#     try:
+#         response = requests.post(OLLAMA_API_URL + 'api/embeddings', headers=headers, json=data)
+#         print(response, "<=====response")
 
-        if response.status_code == 200:
-            response_data = response.json()
-            embedding = response_data.get("embedding", [])
-            print("Generated Embedding:", embedding)
-            return embedding  # 성공 시 임베딩 반환
-        else:
-            # 실패 시 로그와 기본값 반환
-            print("Error:", response.json())
-            return []  # 빈 리스트 반환
-    except requests.exceptions.RequestException as e:
-        # 요청 예외 처리
-        print(f"Request failed: {e}")
-        return []  # 요청 실패 시 빈 리스트 반환
+#         if response.status_code == 200:
+#             response_data = response.json()
+#             embedding = response_data.get("embedding", [])
+#             print("Generated Embedding:", embedding)
+#             return embedding  # 성공 시 임베딩 반환
+#         else:
+#             # 실패 시 로그와 기본값 반환
+#             print("Error:", response.json())
+#             return []  # 빈 리스트 반환
+#     except requests.exceptions.RequestException as e:
+#         # 요청 예외 처리
+#         print(f"Request failed: {e}")
+#         return []  # 요청 실패 시 빈 리스트 반환
 
 
 
