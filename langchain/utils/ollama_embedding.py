@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from config.config import OLLAMA_API_URL
 import numpy as np
+from langchain.embeddings.base import Embeddings
 
 MAX_LENGTH = 512  # 모델에서 허용하는 최대 입력 길이 설정
 
@@ -50,21 +51,35 @@ def split_text(text: str, max_length: int = MAX_LENGTH) -> List[str]:
     """
     return [text[i:i+max_length] for i in range(0, len(text), max_length)]
 
-def get_embedding_from_ollama(text: str) -> List[float]:
-    headers = {"Content-Type": "application/json"}
-    data = {"model": "nomic-embed-text", "prompt": text}  # Changed 'input' to 'prompt'
-
-    response = requests.post(OLLAMA_API_URL + 'api/embeddings', headers=headers, json=data)
-    print(f"[DEBUG] Ollama API Response Status: {response.status_code}")
-    print(f"[DEBUG] Ollama API Response Data: {response.json()}")
-
-    if response.status_code == 200:
-        embedding = response.json().get("embedding", [])
-        if not embedding:
-            print("[ERROR] Empty embedding received.")
-            raise ValueError("Failed to generate embedding: embedding is empty.")
-        print(f"[DEBUG] Embedding Retrieved: {embedding}, Length: {len(embedding)}")
-        return embedding
-    else:
-        error_message = response.json().get("error", "Unknown error")
+def get_embedding_from_ollama(text: str) -> List[float]: 
+    headers = {"Content-Type": "application/json"} 
+    if isinstance(text, list): 
+        text = " ".join(map(str, text)) # 리스트의 각 요소를 문자열로 변환 후 합침 
+    data = {"model": "nomic-embed-text", "prompt": text} 
+    try: 
+        response = requests.post(OLLAMA_API_URL + 'api/embeddings', headers=headers, json=data)
+        response.raise_for_status() # 상태 코드가 4xx/5xx일 경우 예외 발생 
+    except requests.RequestException as e: 
+        print(f"[ERROR] Failed to get embedding from Ollama API: {str(e)}")
+        raise 
+    if response.status_code == 200: 
+        embedding = response.json().get("embedding", []) 
+        if not embedding: 
+            print("[ERROR] Empty embedding received.") 
+            raise ValueError("Failed to generate embedding: embedding is empty.") 
+        print("[INFO] Embedding success") 
+        return embedding 
+    else: 
+        error_message = response.json().get("error", "Unknown error") 
+        print(f"[ERROR] Ollama API responded with error: {error_message}") 
         raise ValueError(f"Failed to get embedding from Ollama: {error_message}")
+
+class OllamaEmbeddings(Embeddings):
+    def embed_query(self, text: str) -> List[float]:
+        if isinstance(text, dict) and "query" in text:
+            text = text["query"] # dict에서 query 키의 값을 추출 
+        print(f"embed_query start {text} and type : {type(text)}") 
+        return get_embedding_from_ollama(text)
+    
+    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+        return [get_embedding_from_ollama(text) for text in texts]

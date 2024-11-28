@@ -131,3 +131,19 @@ def search_data(collection):
                 "answer": hit.entity.get("answer")
             })
     return result_data
+
+# def collection_search(collection):
+#     # 컬렉션 로드 (이미 로드되었는지 확인하지 않아도 됩니다)
+#     collection.load()
+#     res = collection.get_load_state()​
+#     # 결과 처리
+#     result_data = []
+#     for hits in res:
+#         for hit in hits:
+#             result_data.append({
+#                 "id": hit.id,
+#                 "distance": hit.distance,
+#                 "question": hit.entity.get("question"),
+#                 "answer": hit.entity.get("answer")
+#             })
+#     return result_data

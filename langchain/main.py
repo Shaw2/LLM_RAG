@@ -5,8 +5,8 @@
 from config.config import MILVUS_HOST, MILVUS_PORT
 from pipelines.content_chain import ContentChain
 from utils.helpers import languagechecker, insert_data, create_collection, search_data
-from utils.ollama_embedding import get_embedding_from_ollama, get_embedding_from_ollama
-from utils.ollama_client import OllamaClient
+from utils.ollama_embedding import get_embedding_from_ollama, get_embedding_from_ollama, OllamaEmbeddings
+from utils.ollama_client import OllamaClient, OllamaLLM
 from utils.RAGChain import CustomRAGChain
 from fastapi import FastAPI, HTTPException, Body
 from fastapi.responses import StreamingResponse
@@ -17,7 +17,8 @@ from pymilvus import connections, Collection, utility
 from typing import AsyncGenerator, List
 from pydantic import BaseModel
 from typing import Dict
-
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 app = FastAPI()
 
@@ -65,61 +66,96 @@ async def generate(request: GenerateRequest):
 async def generate_RAG(request: GenerateRequest):
     try:
         # 입력 텍스트
+        test_text = "tell me about business"
         input_text = request.input_text
 
         # 언어 감지
         discriminant = languagechecker(input_text)
-        print(discriminant, "<===진행")
 
         # OllamaClient로 임베딩 생성 (언어에 따라 번역 포함)
         if discriminant:
             translated_text = content_chain.ko_en_translator.translate(input_text)
             query_embedding = get_embedding_from_ollama(translated_text)
+
         else:
             query_embedding = get_embedding_from_ollama(input_text)
+        embedding = get_embedding_from_ollama(test_text)
+        if not isinstance(query_embedding, list):
+            print(f"[ERROR] Embedding should be a list, but got {type(query_embedding)} instead.")
 
         # Milvus 벡터 스토어 초기화 (컬렉션 이름, 임베딩 함수 및 연결 정보 제공)
         collection = Collection("ko_std_industry_collection")
-        print(collection.describe())
-        print(collection,"<=====connection")
-        milvus_store = Milvus(
-            collection_name="ko_std_industry_collection",
-            embedding_function=get_embedding_from_ollama,  # 사용하려는 임베딩 함수
-            connection_args={"host": "172.19.0.6", "port": "19530"}
-        )
-        print("milvus_store")
+        try:
+            # Milvus 연결 파라미터 확인
+            milvus_store = Milvus(
+                collection_name="ko_std_industry_collection",
+                embedding_function=OllamaEmbeddings(),
+                connection_args={
+                    "host": "172.19.0.6",
+                    "port": "19530"
+                }, 
+                vector_field="question_embedding", 
+                text_field="question"
+            )# 문서의 텍스트 데이터를 나타내는 필드명을 question으로 설정
+            
+            # 연결 및 컬렉션 상태 확인
+            print("Milvus 연결 상태 확인")
+            
+            # Retriever 생성 전 추가 검증
+            retriever = milvus_store.as_retriever(
+                search_type="similarity", 
+                search_kwargs={"k": 1}
+            )
+            
+            try:
+                docs = retriever.invoke({"query": test_text})
+                print("검색된 문서 invoke:", docs)
+            except Exception as e:
+                print("에러 상세 정보:", e)
+                import traceback
+                traceback.print_exc()
+
+        except Exception as e:
+            print("Milvus 초기화 중 오류 발생:")
+            import traceback
+            traceback.print_exc()
+
+
+        print("Milvus store initialized.")
+
         search_params = {
             "metric_type": "L2",
             "params": {"nprobe": 10}
         }
+        print(f"Search parameters: {search_params}")
 
-        print("search_params")
         output_fields = ["question", "answer"]
 
         results = collection.search(
             data=[query_embedding],
             anns_field="question_embedding",
             param=search_params,
-            limit=3,
+            limit=1,
             expr=None,
             output_fields=output_fields
         )
 
-        print("results")
-        print("milvus 관련 설정 완료")
+        print(f"Search results: {results}")
+        print("Milvus vector store search completed.")
+
         # 검색된 문서로 컨텍스트 구성
         retrieved_context = ""
         for hits in results:
             for hit in hits:
                 retrieved_context += f"Q: {hit.entity.get('question')}\nA: {hit.entity.get('answer')}\n\n"
+        print(f"Retrieved context: {retrieved_context}")
 
-        print(f"Retrieved Context: {retrieved_context}")
-
-        # Ollama API를 사용하여 최종 생성 수행
+        # 프롬프트 템플릿 정의
         prompt_template = PromptTemplate(
             input_variables=["context", "question"],
             template="""
             Use the following context to answer the question:
+            The answer is only in English:
             Context:
             {context}
 
@@ -127,25 +163,37 @@ async def generate_RAG(request: GenerateRequest):
             {question}
             """
         )
+        print("Prompt template defined.")
+
         # OllamaClient로 LLM 호출
-        ollama_llm = OllamaClient()  # OllamaClient 객체 생성
-        print("ollama client 객체 생성 완료")
+        ollama_client = OllamaClient()  # OllamaClient 객체 생성
+        print("OllamaClient 객체 생성 완료.")
+
+        # LLM 래퍼 객체 생성
+        ollama_llm = OllamaLLM(client=ollama_client, model_name="llama3.2")
+        print("OllamaLLM 래퍼 객체 생성 완료.")
 
         # CustomRAGChain 생성
         custom_chain = CustomRAGChain(
-            retriever=milvus_store.as_retriever(),
+            retriever=retriever,
             llm=ollama_llm,  # OllamaClient를 LLM로 사용
             prompt_template=prompt_template
         )
-        print("custom chain 생성 완료")
-        # CustomRAGChain을 사용하여 최종 응답 생성
-        response = custom_chain({"question": input_text})
+        print("CustomRAGChain 생성 완료.")
+        
 
-        return {"response": response["answer"]}
+        # 동기 체인 호출을 비동기적으로 실행
+        loop = asyncio.get_event_loop()
+        with ThreadPoolExecutor() as pool:
+            response = await loop.run_in_executor(pool, lambda: custom_chain({"question": input_text}))
+        print(f"CustomRAGChain 응답: {response['answer']}")
+        translated_text = content_chain.en_ko_translator.translate(response['answer'])
+        return {"response": translated_text}
 
     except Exception as e:
         print(f"Error: {str(e)}")
         return {"error": str(e)}
+    
 # API 엔드포인트 streaming 방식
 # @app.post("/generate")
 # async def generate(request: GenerateRequest):
@@ -363,31 +411,6 @@ async def search_data(request: SearchRequest):
     except Exception as e:
         print(f"Error: {str(e)}")
         return {"error": str(e)}
-
-
-@app.post("/api/test_search")
-def search_test():
-    collection_name = "test_collection"
-    collection = Collection(collection_name)
-    output_fields = ["question",
-            "answer",
-            "First_Category",
-            "Second_Category",
-            "Third_Category",
-            "Fourth_Category",
-            "Fifth_Category",
-            "Menu",
-            "est_date",
-            "corp_name",
-            "question_template"]
-
-    results = collection.query(
-        expr="",
-        output_fields=output_fields,
-        limit=100  # 최대 100개의 결과를 반환하도록 설정
-    )
-
-    return results
 
 
 class QuestionSearchRequest(BaseModel):

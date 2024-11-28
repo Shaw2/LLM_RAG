@@ -1,5 +1,11 @@
-import requests, json
+
+import requests
+import json
+from typing import Optional, List, Any
+from langchain.llms.base import BaseLLM
 from config.config import OLLAMA_API_URL
+from langchain.schema import LLMResult
+from pydantic import Field
 
 class OllamaClient:
     def __init__(self, api_url=OLLAMA_API_URL+'api/generate'):
@@ -21,6 +27,7 @@ class OllamaClient:
         }
 
         try:
+            print(f"Sending request to Ollama API: {payload}")
             response = requests.post(self.api_url, json=payload)
             response.raise_for_status()  # HTTP 에러 발생 시 예외 처리
 
@@ -32,8 +39,10 @@ class OllamaClient:
                     json_line = json.loads(line.strip())  # 각 줄을 JSON 파싱
                     all_text += json_line.get("response", "")
                 except json.JSONDecodeError as e:
+                    print(f"JSON decode error: {e}")
                     continue  # JSON 파싱 오류 시 건너뛰기
 
+            print(f"Ollama API response: {all_text.strip() if all_text else 'Empty response received'}")
             return all_text.strip() if all_text else "Empty response received"
 
         except requests.exceptions.RequestException as e:
@@ -41,6 +50,41 @@ class OllamaClient:
             raise RuntimeError(f"Ollama API 요청 실패: {e}")
 
 
+class OllamaLLM(BaseLLM):
+    client: OllamaClient = Field(..., description="OllamaClient instance")
+    model_name: str = Field(default="llama3.2", description="Model name to use with Ollama")
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        print(f"OllamaLLM initialized with client: {self.client}, model_name: {self.model_name}")
+
+    @property
+    def _llm_type(self) -> str:
+        return "ollama"
+
+    def _call(self, prompt: str, stop: Optional[List[str]] = None) -> str:
+        print(f"OllamaLLM._call invoked with prompt: {prompt}")
+        answer = self.client.generate(model=self.model_name, prompt=prompt)
+        print(f"OllamaLLM._call received answer: {answer}")
+        return answer
+
+    async def _acall(self, prompt: str, stop: Optional[List[str]] = None) -> str:
+        print(f"OllamaLLM._acall invoked with prompt: {prompt}")
+        answer = self._call(prompt, stop)
+        print(f"OllamaLLM._acall received answer: {answer}")
+        return answer
+
+    def _generate(
+        self,
+        prompts: List[str],
+        stop: Optional[List[str]] = None,
+        **kwargs
+    ) -> LLMResult:
+        print(f"OllamaLLM._generate invoked with prompts: {prompts}")
+        responses = [self._call(prompt, stop) for prompt in prompts]
+        print(f"OllamaLLM._generate responses: {responses}")
+        return LLMResult(generations=[[{"text": resp}] for resp in responses])
+    
     # streaming 방식
     # def generate(self, model: str, prompt: str) -> str:
     #     """
