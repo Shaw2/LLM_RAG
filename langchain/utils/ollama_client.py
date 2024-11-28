@@ -27,7 +27,6 @@ class OllamaClient:
         }
 
         try:
-            print(f"Sending request to Ollama API: {payload}")
             response = requests.post(self.api_url, json=payload)
             response.raise_for_status()  # HTTP 에러 발생 시 예외 처리
 
@@ -41,8 +40,7 @@ class OllamaClient:
                 except json.JSONDecodeError as e:
                     print(f"JSON decode error: {e}")
                     continue  # JSON 파싱 오류 시 건너뛰기
-
-            print(f"Ollama API response: {all_text.strip() if all_text else 'Empty response received'}")
+                
             return all_text.strip() if all_text else "Empty response received"
 
         except requests.exceptions.RequestException as e:
@@ -56,7 +54,6 @@ class OllamaLLM(BaseLLM):
 
     def __init__(self, **data):
         super().__init__(**data)
-        print(f"OllamaLLM initialized with client: {self.client}, model_name: {self.model_name}")
 
     @property
     def _llm_type(self) -> str:
@@ -69,9 +66,7 @@ class OllamaLLM(BaseLLM):
         return answer
 
     async def _acall(self, prompt: str, stop: Optional[List[str]] = None) -> str:
-        print(f"OllamaLLM._acall invoked with prompt: {prompt}")
         answer = self._call(prompt, stop)
-        print(f"OllamaLLM._acall received answer: {answer}")
         return answer
 
     def _generate(
@@ -80,9 +75,7 @@ class OllamaLLM(BaseLLM):
         stop: Optional[List[str]] = None,
         **kwargs
     ) -> LLMResult:
-        print(f"OllamaLLM._generate invoked with prompts: {prompts}")
         responses = [self._call(prompt, stop) for prompt in prompts]
-        print(f"OllamaLLM._generate responses: {responses}")
         return LLMResult(generations=[[{"text": resp}] for resp in responses])
     
     # streaming 방식

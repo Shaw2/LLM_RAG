@@ -19,9 +19,10 @@ from pydantic import BaseModel
 from typing import Dict
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+from pykospacing import Spacing
 
 app = FastAPI()
-
+spacing = Spacing()
 connections.connect(host="172.19.0.6", port="19530")
 
 # ContentChain 초기화
@@ -65,8 +66,6 @@ async def generate(request: GenerateRequest):
 @app.post("/api/generate_RAG")
 async def generate_RAG(request: GenerateRequest):
     try:
-        # 입력 텍스트
-        test_text = "tell me about business"
         input_text = request.input_text
 
         # 언어 감지
@@ -79,9 +78,6 @@ async def generate_RAG(request: GenerateRequest):
 
         else:
             query_embedding = get_embedding_from_ollama(input_text)
-        embedding = get_embedding_from_ollama(test_text)
-        if not isinstance(query_embedding, list):
-            print(f"[ERROR] Embedding should be a list, but got {type(query_embedding)} instead.")
 
         # Milvus 벡터 스토어 초기화 (컬렉션 이름, 임베딩 함수 및 연결 정보 제공)
         collection = Collection("ko_std_industry_collection")
@@ -95,39 +91,24 @@ async def generate_RAG(request: GenerateRequest):
                     "port": "19530"
                 }, 
                 vector_field="question_embedding", 
-                text_field="question"
-            )# 문서의 텍스트 데이터를 나타내는 필드명을 question으로 설정
+                text_field="question" # 문서의 텍스트 데이터를 나타내는 필드명을 question으로 설정
+            )
             
-            # 연결 및 컬렉션 상태 확인
-            print("Milvus 연결 상태 확인")
             
             # Retriever 생성 전 추가 검증
             retriever = milvus_store.as_retriever(
                 search_type="similarity", 
                 search_kwargs={"k": 1}
             )
-            
-            try:
-                docs = retriever.invoke({"query": test_text})
-                print("검색된 문서 invoke:", docs)
-            except Exception as e:
-                print("에러 상세 정보:", e)
-                import traceback
-                traceback.print_exc()
 
         except Exception as e:
             print("Milvus 초기화 중 오류 발생:")
-            import traceback
-            traceback.print_exc()
 
-
-        print("Milvus store initialized.")
 
         search_params = {
             "metric_type": "L2",
             "params": {"nprobe": 10}
         }
-        print(f"Search parameters: {search_params}")
 
         output_fields = ["question", "answer"]
 
@@ -140,8 +121,6 @@ async def generate_RAG(request: GenerateRequest):
             output_fields=output_fields
         )
 
-        print(f"Search results: {results}")
-        print("Milvus vector store search completed.")
 
         # 검색된 문서로 컨텍스트 구성
         retrieved_context = ""
@@ -152,26 +131,32 @@ async def generate_RAG(request: GenerateRequest):
 
         # 프롬프트 템플릿 정의
         prompt_template = PromptTemplate(
-            input_variables=["context", "question"],
-            template="""
-            Use the following context to answer the question:
-            The answer is only in English:
-            Context:
-            {context}
+        input_variables=["context", "question"],
+        template="""
+        You are a highly skilled web development assistant, specialized in helping web builders optimize their platforms. Answer the question in English, tailored for developers or designers creating web builder platforms.
 
-            Question:
-            {question}
-            """
+        ## Context
+        {context}
+
+        ## Question
+        {question}
+
+        ### Instructions for Answer:
+        - Respond in clear and precise English.
+        - Focus on implementation details and practical steps.
+        - Include recommendations for tools, frameworks, or best practices related to web building.
+        - Suggest ways to enhance the user experience or improve platform efficiency.
+        - Provide code snippets, if relevant, to illustrate technical solutions.
+        - If applicable, outline a brief step-by-step process for implementing the solution.
+        - I'm not asking you to generate code
+        """
         )
-        print("Prompt template defined.")
 
         # OllamaClient로 LLM 호출
         ollama_client = OllamaClient()  # OllamaClient 객체 생성
-        print("OllamaClient 객체 생성 완료.")
-
+        
         # LLM 래퍼 객체 생성
         ollama_llm = OllamaLLM(client=ollama_client, model_name="llama3.2")
-        print("OllamaLLM 래퍼 객체 생성 완료.")
 
         # CustomRAGChain 생성
         custom_chain = CustomRAGChain(
@@ -179,15 +164,14 @@ async def generate_RAG(request: GenerateRequest):
             llm=ollama_llm,  # OllamaClient를 LLM로 사용
             prompt_template=prompt_template
         )
-        print("CustomRAGChain 생성 완료.")
         
-
         # 동기 체인 호출을 비동기적으로 실행
         loop = asyncio.get_event_loop()
         with ThreadPoolExecutor() as pool:
             response = await loop.run_in_executor(pool, lambda: custom_chain({"question": input_text}))
-        print(f"CustomRAGChain 응답: {response['answer']}")
         translated_text = content_chain.en_ko_translator.translate(response['answer'])
+        translated_text = spacing(response['answer'])
+        print(f"CustomRAGChain 응답: {translated_text}")
         return {"response": translated_text}
 
     except Exception as e:
