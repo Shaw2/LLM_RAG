@@ -19,10 +19,10 @@ from pydantic import BaseModel
 from typing import Dict
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-from pykospacing import Spacing
+
 
 app = FastAPI()
-spacing = Spacing()
+
 connections.connect(host="172.19.0.6", port="19530")
 
 # ContentChain 초기화
@@ -98,7 +98,7 @@ async def generate_RAG(request: GenerateRequest):
             # Retriever 생성 전 추가 검증
             retriever = milvus_store.as_retriever(
                 search_type="similarity", 
-                search_kwargs={"k": 1}
+                search_kwargs={"k": 3}
             )
 
         except Exception as e:
@@ -133,7 +133,7 @@ async def generate_RAG(request: GenerateRequest):
         prompt_template = PromptTemplate(
         input_variables=["context", "question"],
         template="""
-        You are a web development create assistant, specialized in helping web builders optimize their platforms. Answer the question in English, tailored for developers or designers creating web builder platforms.
+        You are a web-making assistant specialized in web builders optimizing their platforms. For users using web builders, answer customized English questions.
 
         ## Context
         {context}
@@ -169,10 +169,19 @@ async def generate_RAG(request: GenerateRequest):
         loop = asyncio.get_event_loop()
         with ThreadPoolExecutor() as pool:
             response = await loop.run_in_executor(pool, lambda: custom_chain({"question": input_text}))
-        translated_text = content_chain.en_ko_translator.translate(response['answer'])
-        translated_text = spacing(response['answer'])
-        print(f"CustomRAGChain 응답: {translated_text}")
-        return {"response": translated_text}
+        
+        # 번역 후 줄 바꿈 및 구조 유지
+        def translate_line(line):
+            if not line.strip():
+                return ""
+            translated =  content_chain.en_ko_translator.translate(line)
+            return translated
+        lines = response['answer'].split("\n")
+        translated_with_linebreaks = "\n".join(
+            translate_line(line) for line in lines
+        )
+        print(f"CustomRAGChain 응답: {translated_with_linebreaks}")
+        return {"response": translated_with_linebreaks}
 
     except Exception as e:
         print(f"Error: {str(e)}")

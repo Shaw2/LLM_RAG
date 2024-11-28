@@ -134,7 +134,6 @@ class EnKoTranslator:
         """
         긴 텍스트를 분할하여 번역
         """
-        print("한국어 번역 시작")
 
         # 긴 텍스트 분할
         chunks = self.split_text(text, max_token_length)
