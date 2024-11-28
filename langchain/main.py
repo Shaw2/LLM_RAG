@@ -133,7 +133,7 @@ async def generate_RAG(request: GenerateRequest):
         prompt_template = PromptTemplate(
         input_variables=["context", "question"],
         template="""
-        You are a highly skilled web development assistant, specialized in helping web builders optimize their platforms. Answer the question in English, tailored for developers or designers creating web builder platforms.
+        You are a web development create assistant, specialized in helping web builders optimize their platforms. Answer the question in English, tailored for developers or designers creating web builder platforms.
 
         ## Context
         {context}
