@@ -8,6 +8,12 @@ from utils.helpers import languagechecker, insert_data, create_collection, searc
 from utils.ollama_embedding import get_embedding_from_ollama, get_embedding_from_ollama, OllamaEmbeddings
 from utils.ollama_client import OllamaClient, OllamaLLM
 from utils.RAGChain import CustomRAGChain
+from script.prompt import RAG_TEMPLATE, WEB_MENU_TEMPLATE
+
+# local lib
+# ------------------------------------------------------------------------ #
+# outdoor lib
+
 from fastapi import FastAPI, HTTPException, Body
 from fastapi.responses import StreamingResponse
 from langchain.vectorstores import Milvus
@@ -80,6 +86,8 @@ async def generate_RAG(request: GenerateRequest):
             query_embedding = get_embedding_from_ollama(input_text)
 
         # Milvus 벡터 스토어 초기화 (컬렉션 이름, 임베딩 함수 및 연결 정보 제공)
+        def collection_select():
+            return
         collection = Collection("ko_std_industry_collection")
         try:
             # Milvus 연결 파라미터 확인
@@ -130,6 +138,10 @@ async def generate_RAG(request: GenerateRequest):
         print(f"Retrieved context: {retrieved_context}")
 
         # 프롬프트 템플릿 정의
+        template = ''
+        def template_select():
+            
+            return template
         prompt_template = PromptTemplate(
         input_variables=["context", "question"],
         template="""
