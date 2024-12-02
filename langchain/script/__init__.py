@@ -1,0 +1,1 @@
+from prompt import RAG_TEMPLATE, WEB_MENU_TEMPLATE
