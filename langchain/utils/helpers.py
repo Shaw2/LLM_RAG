@@ -27,7 +27,7 @@ def languagechecker(text):
 # ==============================================================================================================
 # 컬렉션 생성 함수
 
-connections.connect(host='172.19.0.6', port='19530')
+
 def create_collection(name: str):
     try:
         collection_name = name

@@ -29,8 +29,6 @@ from concurrent.futures import ThreadPoolExecutor
 
 app = FastAPI()
 
-connections.connect(host="172.19.0.6", port="19530")
-
 # ContentChain 초기화
 content_chain = ContentChain()
 

@@ -64,7 +64,8 @@ services:
       - "etcd"
       - "minio"
     networks:
-      - service_network
+      service_network:
+        ipv4_address: 172.19.0.6
 
   ollama:
     image: ollama/ollama:latest
@@ -93,6 +94,8 @@ services:
       - "8000:8000"
     volumes:
       - ./langchain:/app/langchain
+    environment:
+      - ollama_IP=172.19.0.6
     networks:
       - service_network
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload  # Uvicorn 실행 명령어
@@ -100,6 +103,9 @@ services:
 networks:
   service_network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.19.0.0/16
 
 volumes:
   etcd-data:

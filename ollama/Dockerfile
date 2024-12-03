@@ -13,5 +13,7 @@ EXPOSE 11434
 # Create volume to persist models
 VOLUME ["/models"]
 
+RUN ollama pull llama3.2 && ollama pull nomic-embed-text
+
 # Run Ollama server when the container starts
 ENTRYPOINT ["ollama", "serve"]
