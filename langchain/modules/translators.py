@@ -1,5 +1,6 @@
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoModelForSeq2SeqLM
-from config.config import KO_EN_MODEL_PATH, EN_KO_MODEL_PATH, DEVICE, MAX_LENGTH
+from models.models_conf import KO_EN_MODEL_PATH, EN_KO_MODEL_PATH
+from config.config import DEVICE, MAX_LENGTH
 import torch
 
 

@@ -10,10 +10,14 @@ WORKDIR /app
 # Expose port 11434 for Ollama API
 EXPOSE 11434
 
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
 # Create volume to persist models
 VOLUME ["/models"]
 
-RUN ollama pull llama3.2 && ollama pull nomic-embed-text
+# Copy entrypoint script and set execute permissions
+COPY ./entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# Run Ollama server when the container starts
-ENTRYPOINT ["ollama", "serve"]
+# Use entrypoint.sh as the entry point
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
