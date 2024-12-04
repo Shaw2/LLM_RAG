@@ -2,6 +2,7 @@ from langchain.prompts import PromptTemplate
 from modules.translators import KoEnTranslator, EnKoTranslator
 from utils.ollama_client import OllamaClient
 
+
 class ContentChain:
     def __init__(self):
         self.ko_en_translator = KoEnTranslator()
@@ -12,7 +13,26 @@ class ContentChain:
         # 프롬프트 템플릿 설정
         self.prompt_template = PromptTemplate(
             input_variables=["text"], 
-            template="Write a response for the following input: {text}"
+            template="""- You are the organizer of the company introduction website. 
+             - Data is a company profile or company introduction. 
+             - The result values will be printed in three ways.
+             - First is the title of website.
+             - Second is pick 3 keywords in the contents.
+             - Third is to write two_depth menu refer to menu_structure in assistant. The first_depth must be 3~5. The second_depth must be 0~4. Don't need to write extra explaination about second_depth. the length of menus should be less than 15 letters.
+             
+             ex) : 
+             예시:
+            {
+                "Title": "company introduce",
+                "Keywords": ["sofa", "interior", "furniture"],
+                "menu": {
+                    "소개": ["Company Overview", "history", "vision"],
+                    "서비스": ["product descriptions", "solution", "support"],
+                    "연락처": ["Contact us", "Location", "Recruit"]
+                }
+            }
+            {text}
+             """
         )
     # 일괄 처리 방식
     def run(self, input_text, discriminant, model="llama3.2"):

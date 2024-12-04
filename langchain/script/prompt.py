@@ -38,3 +38,60 @@ WEB_MENU_TEMPLATE = '''
     4. **Question:** "What is the future outlook for this industry?"
     - **Context:** Explain the future outlook and major challenges for the selected industry. [Example for the healthcare industry: advancements in AI for diagnostics, expansion of telemedicine services, etc.]
     '''
+    
+TITLE_STRUCFTURE = """- You can use this example to write down title.
+                    [Title]
+                    The example of title
+                    """
+
+KEYWORDS_STRUCTRUE = """- You can use this example to write down keywords.
+                    [Keywords]
+                    1. A
+                    2. B
+                    3. C
+                    """
+
+MENU_STRUCTURE = """- You can use this kind of structure when build two_depth menu. start with 'number' is first_depth menu. start with '-' is second_depth menu.
+                    [Two_depth Menu]
+                    1. Home
+                    2. Company Introduction   
+                            - Company History   
+                            - Company Vision   
+                            - CEO Message                    
+                    3. Business Overview   
+                            - Business Areas
+                            - Business Achievements
+                            - Future Goals 
+                    4. Contact Us
+                            - Location   
+                            - Phone   
+                            - FAQs
+                            - Team members"""
+
+CONTENT_STRUCTURE = """ - You can use this when make contents of menues
+                    1. Main
+                    Content: A brief introduction to the company's vision and mission.
+
+                    2. About Us
+                        2-1. CEO's Message
+                            Content: Basic company information, goals, and vision.
+                        2-2. Organization Chart
+                            Content: Introduction to the company's organizational structure and key personnel.
+                        2-3. History
+                            Content: The company's growth process over the years.
+                    
+                    3. Services
+                        3-1. Business Areas
+                            Content: The company's business items and areas of operation.
+                        3-2. Business Achievements
+                            Content: The company's business accomplishments.
+                        3-3. Product Introduction
+                            Content: Description of the company's products and services.
+                    
+                    4. Customer Service
+                        4-1. Notices
+                            Content: The company's latest news and events.
+                        4-2. Customer Inquiries
+                            Content: Contact information, email, social media links, etc.
+                        4-3. FAQ
+                            Content: Frequently asked questions and answers. """

@@ -8,9 +8,10 @@ from langchain.schema import LLMResult
 from pydantic import Field
 
 class OllamaClient:
-    def __init__(self, api_url=OLLAMA_API_URL+'api/generate'):
+    def __init__(self, api_url=OLLAMA_API_URL+'api/generate', temperature=0.05):
         self.api_url = api_url
-
+        self.temperature = temperature
+        
     def generate(self, model: str, prompt: str) -> str:
         """
         Ollama API를 사용하여 텍스트 생성
@@ -23,7 +24,8 @@ class OllamaClient:
         """
         payload = {
             "model": model,
-            "prompt": prompt
+            "prompt": prompt,
+            "temperature": self.temperature,
         }
 
         try:
@@ -155,3 +157,4 @@ class OllamaLLM(BaseLLM):
     #     except Exception as e:
     #         print(f"Error: {e}")
     #         raise RuntimeError(f"Ollama API 요청 실패: {e}")
+    

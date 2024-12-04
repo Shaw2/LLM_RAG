@@ -508,3 +508,37 @@ def search_by_question(request: QuestionSearchRequest):
         raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    
+    
+
+#---------------------------------
+# Menu Generate Test
+#---------------------------------
+
+@app.post("/generate_menu")
+async def generate_menu(request: GenerateRequest):
+    """
+    텍스트 생성 API 엔드포인트 (스트리밍 형태로 반환)
+    """
+    try:
+        # 입력 텍스트가 한국어인지 판별
+        discriminant = languagechecker(request.input_text)
+        print(discriminant, "<===진행")
+
+        # ContentChain에서 결과 생성
+        result = content_chain.run(request.input_text, discriminant, model=request.model)
+        print(f"Final result: {result}")  # 디버깅용 출력
+
+        # 스트리밍 데이터 생성
+        async def stream_response() -> AsyncGenerator[str, None]:
+            for line in result.split("\n"):  # 결과를 줄 단위로 나눔
+                yield line + "\n"  # 각 줄을 클라이언트에 스트리밍
+                print(f"Streamed line: {line}")  # 디버깅용 출력
+
+        # StreamingResponse로 반환
+        return StreamingResponse(stream_response(), media_type="text/plain")
+
+    except Exception as e:
+        # 에러 발생 시 처리
+        print(f"Error: {str(e)}")
+        return {"error": str(e)}
