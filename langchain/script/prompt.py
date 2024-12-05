@@ -39,12 +39,12 @@ WEB_MENU_TEMPLATE = '''
     - **Context:** Explain the future outlook and major challenges for the selected industry. [Example for the healthcare industry: advancements in AI for diagnostics, expansion of telemedicine services, etc.]
     '''
     
-TITLE_STRUCFTURE = """- You can use this example to write down title.
+TITLE_STRUCTURE = """- You can use this example to write down title.
                     [Title]
                     The example of title
                     """
 
-KEYWORDS_STRUCTRUE = """- You can use this example to write down keywords.
+KEYWORDS_STRUCTURE = """- You can use this example to write down keywords.
                     [Keywords]
                     1. A
                     2. B
@@ -53,19 +53,19 @@ KEYWORDS_STRUCTRUE = """- You can use this example to write down keywords.
 
 MENU_STRUCTURE = """- You can use this kind of structure when build two_depth menu. start with 'number' is first_depth menu. start with '-' is second_depth menu.
                     [Two_depth Menu]
-                    1. Home
-                    2. Company Introduction   
-                            - Company History   
-                            - Company Vision   
-                            - CEO Message                    
-                    3. Business Overview   
-                            - Business Areas
-                            - Business Achievements
-                            - Future Goals 
-                    4. Contact Us
-                            - Location   
-                            - Phone   
-                            - FAQs
+                    1. Home, 
+                    2. Company Introduction, 
+                            - Company History,    
+                            - Company Vision,  
+                            - CEO Message,                     
+                    3. Business Overview,    
+                            - Business Areas, 
+                            - Business Achievements, 
+                            - Future Goals,  
+                    4. Contact Us, 
+                            - Location,    
+                            - Phone,    
+                            - FAQs, 
                             - Team members"""
 
 CONTENT_STRUCTURE = """ - You can use this when make contents of menues

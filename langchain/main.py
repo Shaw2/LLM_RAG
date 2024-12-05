@@ -8,6 +8,7 @@ from utils.helpers import languagechecker, insert_data, create_collection, searc
 from utils.ollama_embedding import get_embedding_from_ollama, get_embedding_from_ollama, OllamaEmbeddings
 from utils.ollama_client import OllamaClient, OllamaLLM
 from utils.RAGChain import CustomRAGChain
+from utils.PDF2TXT import PDF2TEXT
 from script.prompt import RAG_TEMPLATE, WEB_MENU_TEMPLATE
 
 # local lib
@@ -25,7 +26,10 @@ from pydantic import BaseModel
 from typing import Dict
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-
+import requests
+from io import BytesIO
+import time
+import torch, gc
 
 app = FastAPI()
 
@@ -50,7 +54,7 @@ async def generate(request: GenerateRequest):
         print(discriminant, "<===진행")
 
         # ContentChain에서 결과 생성
-        result = content_chain.run(request.input_text, discriminant, model=request.model)
+        result = content_chain.run(request.input_text, discriminant, model=request.model, value_type="general")
         print(f"Final result: {result}")  # 디버깅용 출력
 
         # 스트리밍 데이터 생성
@@ -516,27 +520,48 @@ def search_by_question(request: QuestionSearchRequest):
 #---------------------------------
 
 @app.post("/generate_menu")
-async def generate_menu(request: GenerateRequest):
+async def generate_menu(path: str, path2: str='', path3: str=''):
     """
     텍스트 생성 API 엔드포인트 (스트리밍 형태로 반환)
     """
+    gc.collect()
+    torch.cuda.empty_cache()
+    
     try:
+        pdf_list = []
+        response = requests.get(path)
+
+        if response.status_code == 200:
+            pdf_data = BytesIO(response.content)
+            pdf_list.append(pdf_data)
+            
+            if path2 != ''  :
+            # print("path2 : ", path2)
+                response2 = requests.get(path2)
+                pdf_data2 = BytesIO(response2.content)
+                pdf_list.append(pdf_data2)
+            if path3 != '' :
+            # print("path3 : ", path3)
+                response3 = requests.get(path3)
+                pdf_data3 = BytesIO(response3.content)
+                pdf_list.append(pdf_data3)
+        all_text = PDF2TEXT(pdf_list)
+        if len(all_text) > 8192:
+            all_text = all_text[:8192]
+        print(all_text,"<====all_text \n")
+        start = time.time() 
         # 입력 텍스트가 한국어인지 판별
-        discriminant = languagechecker(request.input_text)
+        discriminant = languagechecker(all_text)
         print(discriminant, "<===진행")
 
         # ContentChain에서 결과 생성
-        result = content_chain.run(request.input_text, discriminant, model=request.model)
+        result = content_chain.run(all_text, discriminant, model='llama3.2', value_type='menu')
         print(f"Final result: {result}")  # 디버깅용 출력
 
-        # 스트리밍 데이터 생성
-        async def stream_response() -> AsyncGenerator[str, None]:
-            for line in result.split("\n"):  # 결과를 줄 단위로 나눔
-                yield line + "\n"  # 각 줄을 클라이언트에 스트리밍
-                print(f"Streamed line: {line}")  # 디버깅용 출력
-
-        # StreamingResponse로 반환
-        return StreamingResponse(stream_response(), media_type="text/plain")
+        end = time.time()
+        
+        print("process time : ", end - start)
+        return result
 
     except Exception as e:
         # 에러 발생 시 처리

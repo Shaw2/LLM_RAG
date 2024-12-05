@@ -6,11 +6,15 @@ from langchain.llms.base import BaseLLM
 from config.config import OLLAMA_API_URL
 from langchain.schema import LLMResult
 from pydantic import Field
+from script.prompt import MENU_STRUCTURE, TITLE_STRUCTURE, KEYWORDS_STRUCTURE, CONTENT_STRUCTURE
+from langchain.prompts import PromptTemplate
 
 class OllamaClient:
     def __init__(self, api_url=OLLAMA_API_URL+'api/generate', temperature=0.05):
         self.api_url = api_url
         self.temperature = temperature
+
+        
         
     def generate(self, model: str, prompt: str) -> str:
         """
@@ -48,6 +52,90 @@ class OllamaClient:
         except requests.exceptions.RequestException as e:
             print(f"HTTP 요청 실패: {e}")
             raise RuntimeError(f"Ollama API 요청 실패: {e}")
+  
+    def PDF_Menu(self, model: str, text: str) -> dict:
+        """
+        Ollama API를 사용하여 텍스트 생성
+        Args:
+            model (str): 사용할 Ollama 모델 이름
+            prompt (str): 입력 프롬프트
+
+        Returns:
+            str: Ollama 모델의 생성된 텍스트
+        """
+        # 요청 페이로드 구성
+        prompt = f"""
+                <|start_header_id|>system<|end_header_id|>
+                - You are the organizer of the company introduction website. 
+                - Data is a company profile or company introduction. 
+                - The result values will be printed in three ways.
+                - Data must be generated based absolutely on the sample structure below.
+                
+                1. "title_structure": the title of the website.
+                2. "keywords_structure": a list of 3 keywords extracted from the content.
+                3. "menu_structure": two_depth menu structure. first_depth should be 3-5 and second_depth should be 0-4. No further description is required for second_depth. Menu items should be less than 15 characters long.
+                - Answer only with the JSON object without additional text.
+
+                <|eot_id|><|start_header_id|>user<|end_header_id|>
+                Input data:
+                {text}
+
+                <|eot_id|><|start_header_id|>assistant<|end_header_id|>
+                **Example Structures:**
+
+                {TITLE_STRUCTURE}
+
+                {KEYWORDS_STRUCTURE}
+
+                {MENU_STRUCTURE}
+                
+                {{"title_structure": "The Example of Company Introduction",
+                        "keywords_structure": ["Company", "Introduction", "Jellywork"],
+                        "menu_structure": [
+                            "1. Home, ",
+                            "2. Company Introduction, ",
+                                "- Company History",
+                                "- Company Vision",
+                                "- CEO Message",
+                            "3. Business Overview, ",
+                                "- Business Areas",
+                                "- Business Achievements",
+                                "- Future Goals",
+                            "4. Contact Us, ",
+                                "- Location",
+                                "- Phone",
+                                "- FAQs",
+                                "- Team members"
+                        ]
+                    }}
+                """
+        payload = {
+            "model": model,  # 사용 중인 Ollama 모델 이름으로 변경하세요
+            "prompt": prompt,
+            "temperature": 0.05,
+            "max_tokens" : 1024
+        }
+        try:
+            response = requests.post(self.api_url, json=payload)
+            response.raise_for_status()  # HTTP 에러 발생 시 예외 처리
+
+            full_response = response.text  # 전체 응답
+            lines = full_response.splitlines()
+            all_text = ""
+            for line in lines:
+                try:
+                    json_line = json.loads(line.strip())  # 각 줄을 JSON 파싱
+                    all_text += json_line.get("response", "")
+                except json.JSONDecodeError as e:
+                    print(f"JSON decode error: {e}")
+                    continue  # JSON 파싱 오류 시 건너뛰기
+                
+            return all_text.strip() if all_text else "Empty response received"
+
+        except requests.exceptions.RequestException as e:
+            print(f"HTTP 요청 실패: {e}")
+            raise RuntimeError(f"Ollama API 요청 실패: {e}")
+
 
 
 class OllamaLLM(BaseLLM):

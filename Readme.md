@@ -9,6 +9,15 @@
 4. 각 이미지별로 debug, info log message 확인 후 점검
 
 
+
+--------
+kubernetes
+kubectl apply -f kubernetes/ollama/deployment.yaml #쿠버네티스 설치
+kubectl apply -f kubernetes/ollama/service.yaml
+
+kubectl get pods --all-namespaces 쿠버네티스 관리 pods 전체 서치
+
+kubectl exec -it ollama-deployment-b796b4bf5-hj5q2 -n default -- /bin/bash
 --------
 
 LLM - llama를 이용한 생성 방식 (한글 영어 상관 없음)

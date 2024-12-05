@@ -137,6 +137,9 @@ class EnKoTranslator:
         """
 
         # 긴 텍스트 분할
+        if not isinstance(text, str):
+            raise ValueError(f"translate 메소드는 문자열을 기대합니다. 전달된 타입: {type(text)}")
+        
         chunks = self.split_text(text, max_token_length)
 
         # 각 조각을 번역하고 결과를 합치기
@@ -156,6 +159,17 @@ class EnKoTranslator:
             translated_chunks.append(self.tokenizer.decode(outputs[0], skip_special_tokens=True))
 
         return " ".join(translated_chunks)
+    
+    def translate_structure(self, data):
+        if isinstance(data, dict):
+            return {k: self.translate_structure(v) for k, v in data.items()}
+        elif isinstance(data, list):
+            return [self.translate_structure(item) for item in data]
+        elif isinstance(data, str):
+            return self.en_ko_translator.translate(data)
+        else:
+            return data
+        
     # def translate(self, text: str, max_token_length: int = 1024) -> str:
     #     """
     #     영어 텍스트를 한국어로 번역합니다.
