@@ -135,7 +135,8 @@ class OllamaClient:
                     continue  # JSON 파싱 오류 시 건너뛰기
                 
             all_text = parse_response(all_text)
-            print("all_text :", all_text)
+            all_text = all_text[0]
+            print("all_text :", all_text[0])
             return all_text.strip() if all_text else "Empty response received"
 
         except requests.exceptions.RequestException as e:
