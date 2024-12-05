@@ -79,27 +79,26 @@ class ContentChain:
         elif value_type == "menu":
             translated_text = None
             if discriminant:
-                translated_text = self.ko_en_translator.translate(input_text)
-                print(f"Translated Input Text: {translated_text} <=====translated_text")
+                translated_text = self.ko_en_translator.translate_length_limit(input_text)
+                print(f"Translated Input Text  discriminant True: {translated_text} <=====translated_text, discriminant True")
                 generated_text = self.ollama_client.PDF_Menu(model, translated_text)
                 print(f"Generated Text: {generated_text}")
                 if not generated_text or generated_text == "Empty response received":
                     print("No valid response from PDF_Menu.")
                     return None
-
+                # 데이터를 제대로 생성 못했을 시 한번 더 진행핑 시진핑 도핑 서핑.
+                
+                if generated_text['title_structure'] == "" or generated_text['keywords_structure'] == "" or generated_text['menu_structure'] == "":
+                    
+                    print(f"No match Data ReGenerated Text: {generated_text}")
+                    generated_text = self.ollama_client.PDF_Menu(model, generated_text)
+                    
                 # 필드 추출
                 title_structure = self.extract_field(generated_text, "title_structure")
                 keywords_structure = self.extract_field(generated_text, "keywords_structure")
                 menu_structure = self.extract_field(generated_text, "menu_structure")
-
-                # 데이터를 제대로 생성 못했을 시 한번 더 진행핑 시진핑 도핑 서핑.
-                if generated_text['title_structure'] == "" or generated_text['keywords_structure'] == "" or generated_text['menu_structure'] == "":
-                    generated_text = self.ollama_client.PDF_Menu(model, generated_text)
-                
-                    title_structure = self.extract_field(generated_text, "title_structure")
-                    keywords_structure = self.extract_field(generated_text, "keywords_structure")
-                    menu_structure = self.extract_field(generated_text, "menu_structure")
                 print(f"Extracted Fields: title='{title_structure}', keywords={keywords_structure}, menu={menu_structure}")
+                
 
                 # 딕셔너리 생성
                 translate_list = {
@@ -129,7 +128,12 @@ class ContentChain:
                 if not generated_text or generated_text == "Empty response received":
                     print("No valid response from PDF_Menu.")
                     return None
-
+                # 데이터를 제대로 생성 못했을 시 한번 더 진행핑 시진핑 도핑 서핑.
+                if generated_text['title_structure'] == "" or generated_text['keywords_structure'] == "" or generated_text['menu_structure'] == "":
+                    
+                    print(f"No match Data ReGenerated Text: {generated_text}")
+                    generated_text = self.ollama_client.PDF_Menu(model, generated_text)
+                    
                 # 필드 추출
                 title_structure = self.extract_field(generated_text, "title_structure")
                 keywords_structure = self.extract_field(generated_text, "keywords_structure")

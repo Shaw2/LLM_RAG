@@ -546,9 +546,7 @@ async def generate_menu(path: str, path2: str='', path3: str=''):
                 pdf_data3 = BytesIO(response3.content)
                 pdf_list.append(pdf_data3)
         all_text = PDF2TEXT(pdf_list)
-        if len(all_text) > 8192:
-            all_text = all_text[:8192]
-        print(all_text,"<====all_text \n")
+        print(all_text[:1000],"<====all_text \n")
         start = time.time() 
         # 입력 텍스트가 한국어인지 판별
         discriminant = languagechecker(all_text)

@@ -63,6 +63,68 @@ class KoEnTranslator:
             translated_chunks.append(self.tokenizer.decode(outputs[0], skip_special_tokens=True))
 
         return " ".join(translated_chunks)
+    
+    def translate_length_limit(self, text: str, max_token_length: int = 64, max_total_tokens: int = 6000) -> str:
+        """
+        긴 텍스트를 분할하여 번역하고, 총 번역된 토큰 수가 max_total_tokens를 초과하면 중단합니다.
+        
+        Args:
+            text (str): 번역할 긴 텍스트.
+            max_token_length (int): 각 청크의 최대 토큰 수.
+            max_total_tokens (int): 번역된 전체 텍스트의 최대 토큰 수.
+        
+        Returns:
+            str: 번역된 텍스트의 합계 (최대 max_total_tokens 토큰).
+        """
+        if not isinstance(text, str):
+            raise ValueError(f"translate 메소드는 문자열을 기대합니다. 전달된 타입: {type(text)}")
+        
+        # 텍스트를 청크로 분할
+        chunks = self.split_text(text, max_token_length)
+
+        translated_chunks = []
+        total_tokens = 0
+
+        for chunk in chunks:
+            # 청크를 토크나이즈하여 모델 입력 준비
+            inputs = self.tokenizer(
+                chunk,
+                return_tensors="pt",
+                padding=True,
+                truncation=True,
+                max_length=max_token_length
+            ).to(self.device)
+
+            # 모델을 사용하여 번역
+            outputs = self.model.generate(
+                **inputs,
+                max_length=max_token_length,
+                num_beams=5,
+                early_stopping=True
+            )
+
+            # 번역된 청크 디코딩
+            translated_chunk = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            
+            # 번역된 청크의 토큰 수 계산
+            translated_chunk_tokens = len(self.tokenizer.encode(translated_chunk))
+
+            # 누적 토큰 수가 최대 한계를 초과하지 않도록 체크
+            if total_tokens + translated_chunk_tokens > max_total_tokens:
+                remaining_tokens = max_total_tokens - total_tokens
+                if remaining_tokens > 0:
+                    # 남은 토큰 수에 맞게 청크를 트렁케이트
+                    truncated_tokens = self.tokenizer.encode(translated_chunk)[:remaining_tokens]
+                    truncated_chunk = self.tokenizer.decode(truncated_tokens, skip_special_tokens=True)
+                    translated_chunks.append(truncated_chunk)
+                    total_tokens += len(truncated_tokens)
+                break  # 최대 토큰 수에 도달했으므로 루프 종료
+            else:
+                translated_chunks.append(translated_chunk)
+                total_tokens += translated_chunk_tokens
+
+        return " ".join(translated_chunks)
+    
 
     # def translate(self, text: str, max_token_length: int = 1024) -> str:
     #     """
@@ -159,6 +221,7 @@ class EnKoTranslator:
             translated_chunks.append(self.tokenizer.decode(outputs[0], skip_special_tokens=True))
 
         return " ".join(translated_chunks)
+    
     
     def translate_structure(self, data):
         if isinstance(data, dict):

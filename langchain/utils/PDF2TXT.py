@@ -1,4 +1,4 @@
-import fitz
+import fitz, re
 
 def PDF2TEXT(pdf_list):
     total_text = ""
@@ -8,15 +8,23 @@ def PDF2TEXT(pdf_list):
 
         num_pages = doc.page_count
         print(f"총 페이지 수: {num_pages}")
+        def clean_text(text):
+            # 각 줄을 분리한 후 빈 줄을 제거하고 다시 합침
+            lines = [line.strip() for line in text.splitlines() if line.strip()]
+            cleaned_text = "\n".join(lines)
+            # 여러 개의 공백을 하나로 줄임
+            cleaned_text = re.sub(r'\s+', ' ', cleaned_text)
+            return cleaned_text
 
         extracted_text = ""
-        if num_pages > 10:
-            num_pages = 10
         # 모든 페이지 텍스트 추출
         for page_num in range(num_pages):
             page = doc[page_num]
             text = page.get_text()
-            extracted_text += f"페이지 {page_num + 1}의 텍스트:\n{text}\n"
+            cleaned_text = clean_text(text)
+            if cleaned_text:
+                total_text += f"\n{cleaned_text}\n"
+            extracted_text += f"\n{text}\n"
         
         total_text += extracted_text
         # 페이지에서 이미지 추출

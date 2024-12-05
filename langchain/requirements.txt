@@ -11,3 +11,4 @@ gunicorn
 protobuf==3.20.1
 pymilvus
 langchain-milvus
+PyMuPDF

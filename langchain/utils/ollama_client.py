@@ -8,7 +8,7 @@ from langchain.schema import LLMResult
 from pydantic import Field
 from script.prompt import MENU_STRUCTURE, TITLE_STRUCTURE, KEYWORDS_STRUCTURE, CONTENT_STRUCTURE
 from langchain.prompts import PromptTemplate
-
+import re
 class OllamaClient:
     def __init__(self, api_url=OLLAMA_API_URL+'api/generate', temperature=0.05):
         self.api_url = api_url
@@ -76,6 +76,7 @@ class OllamaClient:
                 3. "menu_structure": two_depth menu structure. first_depth should be 3-5 and second_depth should be 0-4. No further description is required for second_depth. Menu items should be less than 15 characters long.
                 - Answer only with the JSON object without additional text.
 
+                
                 <|eot_id|><|start_header_id|>user<|end_header_id|>
                 Input data:
                 {text}
@@ -88,7 +89,7 @@ class OllamaClient:
                 {KEYWORDS_STRUCTURE}
 
                 {MENU_STRUCTURE}
-                
+
                 {{"title_structure": "The Example of Company Introduction",
                         "keywords_structure": ["Company", "Introduction", "Jellywork"],
                         "menu_structure": [
@@ -108,14 +109,17 @@ class OllamaClient:
                                 "- Team members"
                         ]
                     }}
+
                 """
         payload = {
             "model": model,  # 사용 중인 Ollama 모델 이름으로 변경하세요
             "prompt": prompt,
-            "temperature": 0.05,
-            "max_tokens" : 1024
+            # "temperature": 0.01,
+            # "top_k": 0.1,
+            # "top_p": 0.25
         }
         try:
+            print("start response : ", len(prompt))
             response = requests.post(self.api_url, json=payload)
             response.raise_for_status()  # HTTP 에러 발생 시 예외 처리
 
@@ -130,13 +134,45 @@ class OllamaClient:
                     print(f"JSON decode error: {e}")
                     continue  # JSON 파싱 오류 시 건너뛰기
                 
+            all_text = parse_response(all_text)
+            print("all_text :", all_text)
             return all_text.strip() if all_text else "Empty response received"
 
         except requests.exceptions.RequestException as e:
             print(f"HTTP 요청 실패: {e}")
             raise RuntimeError(f"Ollama API 요청 실패: {e}")
 
+def parse_response(response_text):
+    """
+    응답 텍스트에서 JSON 객체를 추출하여 파싱하는 함수
+    Args:
+        response_text (str): Ollama API로부터 받은 응답 텍스트
 
+    Returns:
+        dict: 파싱된 JSON 객체
+
+    Raises:
+        ValueError: 응답이 유효한 JSON 형식이 아닐 경우
+    """
+    try:
+        # JSON 코드 블록 추출
+        print("원본 데이터 :", response_text)
+        json_match = re.search(r'```json\s*(\{.*?\})\s*```', response_text, re.DOTALL)
+        print(json_match,"<====json_match")
+        # 코드 블록이 없는 경우, 첫 번째 JSON 객체 추출 시도
+        json_objects = re.findall(r'\{.*?\}', response_text, re.DOTALL)
+        print(json_objects,"<====json_objects")
+        for obj in json_objects:
+            try:
+                if "title_structure" in obj:
+                    return json_objects
+            except json.JSONDecodeError:
+                continue  # 유효한 JSON이 아니면 건너뜀
+        # 모든 시도가 실패한 경우 예외 발생
+        raise ValueError("응답 내에 유효한 JSON 객체를 찾을 수 없습니다.")
+    except json.JSONDecodeError as e:
+        print(f"JSON 파싱 오류: {e}")
+        raise ValueError("응답이 유효한 JSON 형식이 아닙니다.")
 
 class OllamaLLM(BaseLLM):
     client: OllamaClient = Field(..., description="OllamaClient instance")
