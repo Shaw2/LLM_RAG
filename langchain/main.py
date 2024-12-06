@@ -553,11 +553,11 @@ async def generate_menu(path: str, path2: str='', path3: str=''):
         # 입력 텍스트가 한국어인지 판별
         discriminant = languagechecker(all_text)
         if discriminant:
-            if len(all_text) > 5912:
-                all_text = all_text[:5912]
+            if len(all_text) > 2500:
+                all_text = all_text[:2500]
         else:
-            if len(all_text) > 6500:
-                all_text = all_text[:6500]
+            if len(all_text) > 8192:
+                all_text = all_text[:8192]
         
         print(len(all_text), "after")
         print(discriminant, "<===진행")

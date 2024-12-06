@@ -92,7 +92,13 @@ services:
       - OLLAMA_HOST=0.0.0.0:11434
     networks:
       - service_network
-
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            count: 1
+            capabilities: [gpu]
   langchain:
     build:
       context: ./langchain  # 현재 디렉토리를 컨텍스트로 사용
@@ -110,6 +116,13 @@ services:
     networks:
       - service_network
     command: uvicorn main:app --host 0.0.0.0 --port 8001 --reload  # Uvicorn 실행 명령어
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            count: 1
+            capabilities: [gpu]
 
 networks:
   service_network:
