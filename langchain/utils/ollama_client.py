@@ -114,7 +114,7 @@ class OllamaClient:
         payload = {
             "model": model,  # 사용 중인 Ollama 모델 이름으로 변경하세요
             "prompt": prompt,
-            # "temperature": 0.01,
+            "temperature": 0.1,
             # "top_k": 0.1,
             # "top_p": 0.25
         }

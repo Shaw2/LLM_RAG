@@ -546,10 +546,20 @@ async def generate_menu(path: str, path2: str='', path3: str=''):
                 pdf_data3 = BytesIO(response3.content)
                 pdf_list.append(pdf_data3)
         all_text = PDF2TEXT(pdf_list)
-        print(all_text[:1000],"<====all_text \n")
+        print(all_text[:1000], len(all_text),"<====all_text \n")
+  
+        
         start = time.time() 
         # 입력 텍스트가 한국어인지 판별
         discriminant = languagechecker(all_text)
+        if discriminant:
+            if len(all_text) > 5912:
+                all_text = all_text[:5912]
+        else:
+            if len(all_text) > 6500:
+                all_text = all_text[:6500]
+        
+        print(len(all_text), "after")
         print(discriminant, "<===진행")
 
         # ContentChain에서 결과 생성

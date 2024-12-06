@@ -88,10 +88,10 @@ class ContentChain:
                     return None
                 # 데이터를 제대로 생성 못했을 시 한번 더 진행핑 시진핑 도핑 서핑.
                 
-                if generated_text['title_structure'] == "" or generated_text['keywords_structure'] == "" or generated_text['menu_structure'] == "":
+                # if generated_text['title_structure'] == "" or generated_text['keywords_structure'] == "" or generated_text['menu_structure'] == "":
                     
-                    print(f"No match Data ReGenerated Text: {generated_text}")
-                    generated_text = self.ollama_client.PDF_Menu(model, generated_text)
+                #     print(f"No match Data ReGenerated Text: {generated_text}")
+                #     generated_text = self.ollama_client.PDF_Menu(model, generated_text)
                     
                 # 필드 추출
                 title_structure = self.extract_field(generated_text, "title_structure")
@@ -129,10 +129,10 @@ class ContentChain:
                     print("No valid response from PDF_Menu.")
                     return None
                 # 데이터를 제대로 생성 못했을 시 한번 더 진행핑 시진핑 도핑 서핑.
-                if generated_text['title_structure'] == "" or generated_text['keywords_structure'] == "" or generated_text['menu_structure'] == "":
+                # if generated_text['title_structure'] == "" or generated_text['keywords_structure'] == "" or generated_text['menu_structure'] == "":
                     
-                    print(f"No match Data ReGenerated Text: {generated_text}")
-                    generated_text = self.ollama_client.PDF_Menu(model, generated_text)
+                #     print(f"No match Data ReGenerated Text: {generated_text}")
+                #     generated_text = self.ollama_client.PDF_Menu(model, generated_text)
                     
                 # 필드 추출
                 title_structure = self.extract_field(generated_text, "title_structure")
