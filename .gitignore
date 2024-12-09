@@ -4,7 +4,8 @@
 /langchain/modules/__pycache__
 /langchain/pipelines//__pycache__
 /langchain/utils/__pycache__
-/llama_models
+/llama_models/ko_en
+/llama_models/en_ko
 /milvus
 /volumes
 /docker-compose_only_ollama_langchain.txt
