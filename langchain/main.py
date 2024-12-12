@@ -556,7 +556,7 @@ async def generate_menu(path: str, path2: str='', path3: str=''):
   
         
         start = time.time() 
-        # 입력 텍스트가 한국어인지 판별
+        # 입력 텍스트가 한국어인지 판별 뺴야함 이부분들 한국어 체크
         discriminant = languagechecker(all_text)
         if discriminant:
             if len(all_text) > 2500:
@@ -581,4 +581,4 @@ async def generate_menu(path: str, path2: str='', path3: str=''):
     except Exception as e:
         # 에러 발생 시 처리
         print(f"Error: {str(e)}")
-        return {"error": str(e)}
+        return {"error": str(e)}#

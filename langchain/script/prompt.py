@@ -67,7 +67,34 @@ WEB_MENU_TEMPLATE = '''
 #                             - Phone,    
 #                             - FAQs, 
 #                             - Team members"""
+# CONTENT_STRUCTURE = """ - You can use this when make contents of menues
+#                     1. Main
+#                     Content: A brief introduction to the company's vision and mission.
 
+#                     2. About Us
+#                         2-1. CEO's Message
+#                             Content: Basic company information, goals, and vision.
+#                         2-2. Organization Chart
+#                             Content: Introduction to the company's organizational structure and key personnel.
+#                         2-3. History
+#                             Content: The company's growth process over the years.
+                    
+#                     3. Services
+#                         3-1. Business Areas
+#                             Content: The company's business items and areas of operation.
+#                         3-2. Business Achievements
+#                             Content: The company's business accomplishments.
+#                         3-3. Product Introduction
+#                             Content: Description of the company's products and services.
+                    
+#                     4. Customer Service
+#                         4-1. Notices
+#                             Content: The company's latest news and events.
+#                         4-2. Customer Inquiries
+#                             Content: Contact information, email, social media links, etc.
+#                         4-3. FAQ
+#                             Content: Frequently asked questions and answers. """
+                            
 TITLE_STRUCTURE = """- 제목 작성에 이 예제를 사용할 수 있습니다.
                     [제목]
                     제목의 예시
@@ -97,30 +124,18 @@ MENU_STRUCTURE = """- 이중 메뉴를 작성할 때 이 구조를 사용할 수
                             - 자주 묻는 질문, 
                             - 팀 멤버"""
 
-CONTENT_STRUCTURE = """ - You can use this when make contents of menues
-                    1. Main
-                    Content: A brief introduction to the company's vision and mission.
-
-                    2. About Us
-                        2-1. CEO's Message
-                            Content: Basic company information, goals, and vision.
-                        2-2. Organization Chart
-                            Content: Introduction to the company's organizational structure and key personnel.
-                        2-3. History
-                            Content: The company's growth process over the years.
-                    
-                    3. Services
-                        3-1. Business Areas
-                            Content: The company's business items and areas of operation.
-                        3-2. Business Achievements
-                            Content: The company's business accomplishments.
-                        3-3. Product Introduction
-                            Content: Description of the company's products and services.
-                    
-                    4. Customer Service
-                        4-1. Notices
-                            Content: The company's latest news and events.
-                        4-2. Customer Inquiries
-                            Content: Contact information, email, social media links, etc.
-                        4-3. FAQ
-                            Content: Frequently asked questions and answers. """
+CONTENT_STRUCTURE = """ 메뉴 구조의 데이터를 key로 하여, 각 메뉴에 적합한 내용들을 value로 생성해야합니다. 
+                    {"홈" : "홈에 적합한 내용 },
+                    {"회사소개" : "회사소개에 적합한 내용 },
+                    {"회사역사" : "회사역사에 적합한 내용 },
+                    {"회사 비전" : "회사 비전에 적합한 내용 },
+                    {"CEO 메시지" : "CEO 메시지에 적합한 내용 },
+                    {"사업 개요" : "사업 개요에 적합한 내용 },
+                    {"사업 영역" : "사업 영역에 적합한 내용 },
+                    {"사업 실적" : "사업 실적에 적합한 내용 },
+                    {"미래 목표" : "미래 목표에 적합한 내용 },
+                    {"문의하기" : "문의하기에 적합한 내용 },
+                    {"위치" : "위치에 적합한 내용 },
+                    {"전화" : "전화에 적합한 내용 },
+                    {"자주 묻는 질문" : "자주 묻는 질문에 적합한 내용 },
+                    {"팀 멤버" : "팀 멤버에 적합한 내용 }"""

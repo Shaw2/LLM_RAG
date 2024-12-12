@@ -122,7 +122,9 @@ class OllamaClient:
                 1. "title_structure": 입력데이터에서 추출한 웹사이트 제목입니다.
                 2. "keywords_structure": 입력데이터에서 추출한 3개의 키워드 리스트입니다.
                 3. "menu_structure": 입력데이터를 기반으로 이중 메뉴 구조로, first_depth는 3~5개, second_depth는 0~4개로 작성됩니다. second_depth에 대한 추가 설명은 필요하지 않습니다. 메뉴 항목은 15자 이내로 작성되어야 합니다.
+                4. "contents_structure: 입력데이터를 기반으로 각 menu_structure에 들어갈 알맞은 내용을 300자 씩 작성해줘.
                 - 추가 텍스트 없이 JSON 객체로만 답변하십시오.
+                - 절대 code 데이터를 생성하지 마세요.
 
                 
                 <|eot_id|><|start_header_id|>user<|end_header_id|>
@@ -138,6 +140,7 @@ class OllamaClient:
 
                 {MENU_STRUCTURE}
 
+                {CONTENT_STRUCTURE}
                 {{"title_structure": "회사 소개 예시",
                         "keywords_structure": ["회사", "소개", "젤리워크"],
                         "menu_structure": [
@@ -155,7 +158,7 @@ class OllamaClient:
                                 "- 전화",
                                 "- 자주 묻는 질문",
                                 "- 팀 멤버"
-                        ]
+                        ],
                     }}
         """
         payload = {
