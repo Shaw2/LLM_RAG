@@ -122,7 +122,6 @@ class OllamaClient:
                 1. "title_structure": 입력데이터에서 추출한 웹사이트 제목입니다.
                 2. "keywords_structure": 입력데이터에서 추출한 3개의 키워드 리스트입니다.
                 3. "menu_structure": 입력데이터를 기반으로 이중 메뉴 구조로, first_depth는 3~5개, second_depth는 0~4개로 작성됩니다. second_depth에 대한 추가 설명은 필요하지 않습니다. 메뉴 항목은 15자 이내로 작성되어야 합니다.
-                4. "contents_structure: 입력데이터를 기반으로 각 menu_structure에 들어갈 알맞은 내용을 300자 씩 작성해줘.
                 - 추가 텍스트 없이 JSON 객체로만 답변하십시오.
                 - 절대 code 데이터를 생성하지 마세요.
 
@@ -139,10 +138,8 @@ class OllamaClient:
                 {KEYWORDS_STRUCTURE}
 
                 {MENU_STRUCTURE}
-
-                {CONTENT_STRUCTURE}
-                {{"title_structure": "회사 소개 예시",
-                        "keywords_structure": ["회사", "소개", "젤리워크"],
+                {{"title_structure": "회사 소개페이지",
+                        "keywords_structure": ["회사", "소개", "사업아이템"],
                         "menu_structure": [
                             "1. 홈, ",
                             "2. 회사 소개, ",
@@ -158,7 +155,7 @@ class OllamaClient:
                                 "- 전화",
                                 "- 자주 묻는 질문",
                                 "- 팀 멤버"
-                        ],
+                        ]
                     }}
         """
         payload = {
@@ -192,7 +189,56 @@ class OllamaClient:
         except requests.exceptions.RequestException as e:
             print(f"HTTP 요청 실패: {e}")
             raise RuntimeError(f"Ollama API 요청 실패: {e}")
+        
+    def PDF_Menu_Contents(self, model: str, text: str, menu: str):
+        """
+        Ollama API를 사용하여 텍스트 생성
+        Args:
+            model (str): 사용할 Ollama 모델 이름
+            prompt (str): 입력 프롬프트
+            menu (str): 사용할 메뉴의 이름
 
+        Returns:
+            str: Ollama 모델의 생성된 텍스트
+        """
+        
+        prompt = f"""0. 너는 각 메뉴에 알맞는 컨텐츠를 작성해 줄 거야. 참고할 자료는 {menu}와 {text}이야
+                1. 먼저 "메뉴"를 보고 어떤 메뉴들이 있는지 기억해놔.
+                2. "PDF 내용"을 전체적으로 본 후에, 각 {menu}에 알맞은 내용을 300자 정도 작성해줘.
+                3. 코드는 절대 생성하면 안돼.
+        """
+        
+
+        payload = {
+            "model": model,  # 사용 중인 Ollama 모델 이름으로 변경하세요
+            "prompt": prompt
+        }
+        try:
+            print("start response : ", len(prompt))
+            response = requests.post(self.api_url, json=payload)
+            response.raise_for_status()  # HTTP 에러 발생 시 예외 처리
+
+            full_response = response.text  # 전체 응답
+            lines = full_response.splitlines()
+            all_text = ""
+            for line in lines:
+                try:
+                    json_line = json.loads(line.strip())  # 각 줄을 JSON 파싱
+                    all_text += json_line.get("response", "")
+                except json.JSONDecodeError as e:
+                    print(f"JSON decode error: {e}")
+                    continue  # JSON 파싱 오류 시 건너뛰기
+                
+            all_text = parse_response(all_text)
+            all_text = all_text[0]
+            print("all_text :", all_text[0])
+            return all_text.strip() if all_text else "Empty response received"
+
+        except requests.exceptions.RequestException as e:
+            print(f"HTTP 요청 실패: {e}")
+            raise RuntimeError(f"Ollama API 요청 실패: {e}")
+        
+        
 def parse_response(response_text):
     """
     응답 텍스트에서 JSON 객체를 추출하여 파싱하는 함수

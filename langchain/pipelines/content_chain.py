@@ -158,6 +158,9 @@ class ContentChain:
         
     #     return final_output
     
+    def contents_run(self, model, input_text, menu):
+        generated_text = self.ollama_client.PDF_Menu_Contents(model, input_text, menu)
+        return generated_text
     def _stream_generate_and_translate(self, model, input_text, is_korean):
         """
         스트리밍 방식으로 Ollama 텍스트 생성 및 번역 처리

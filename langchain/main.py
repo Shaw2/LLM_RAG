@@ -571,6 +571,19 @@ async def generate_menu(path: str, path2: str='', path3: str=''):
         # ContentChain에서 결과 생성
         # result = content_chain.run(all_text, discriminant, model='llama3.2', value_type='menu')
         result = content_chain.run(all_text, discriminant, model='bllossom', value_type='menu')
+        print("process end structure")
+        # if result['menu_structure']:
+        #     menu_content = []
+        #     for menu in result['menu_structure']:
+        #         context = None
+        #         menu_content_dict = {}
+        #         context = content_chain.contents_run(model='bllossom', input_text=all_text, menu=menu)
+        #         menu_content_dict[menu] = context
+        #         menu_content.append(menu_content_dict)
+        #         print(f"menu_content_dict[menu] : {menu_content_dict[menu]}")
+        #     result['menu_content'] = menu_content
+                
+        
         print(f"Final result: {result}")  # 디버깅용 출력
 
         end = time.time()
