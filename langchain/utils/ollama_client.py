@@ -64,25 +64,73 @@ class OllamaClient:
             str: Ollama 모델의 생성된 텍스트
         """
         # 요청 페이로드 구성
-        prompt = f"""
-                <|start_header_id|>system<|end_header_id|>
-                - You are the organizer of the company introduction website. 
-                - Data is a company profile or company introduction. 
-                - The result values will be printed in three ways.
-                - Data must be generated based absolutely on the sample structure below.
+        # prompt = f"""
+        #         <|start_header_id|>system<|end_header_id|>
+        #         - You are the organizer of the company introduction website. 
+        #         - Data is a company profile or company introduction. 
+        #         - The result values will be printed in three ways.
+        #         - Data must be generated based absolutely on the sample structure below.
                 
-                1. "title_structure": the title of the website.
-                2. "keywords_structure": a list of 3 keywords extracted from the content.
-                3. "menu_structure": two_depth menu structure. first_depth should be 3-5 and second_depth should be 0-4. No further description is required for second_depth. Menu items should be less than 15 characters long.
-                - Answer only with the JSON object without additional text.
+        #         1. "title_structure": the title of the website.
+        #         2. "keywords_structure": a list of 3 keywords extracted from the content.
+        #         3. "menu_structure": two_depth menu structure. first_depth should be 3-5 and second_depth should be 0-4. No further description is required for second_depth. Menu items should be less than 15 characters long.
+        #         - Answer only with the JSON object without additional text.
+
+                
+        #         <|eot_id|><|start_header_id|>user<|end_header_id|>
+        #         Input data:
+        #         {text}
+
+        #         <|eot_id|><|start_header_id|>assistant<|end_header_id|>
+        #         **Example Structures:**
+
+        #         {TITLE_STRUCTURE}
+
+        #         {KEYWORDS_STRUCTURE}
+
+        #         {MENU_STRUCTURE}
+
+        #         {{"title_structure": "The Example of Company Introduction",
+        #                 "keywords_structure": ["Company", "Introduction", "Jellywork"],
+        #                 "menu_structure": [
+        #                     "1. Home, ",
+        #                     "2. Company Introduction, ",
+        #                         "- Company History",
+        #                         "- Company Vision",
+        #                         "- CEO Message",
+        #                     "3. Business Overview, ",
+        #                         "- Business Areas",
+        #                         "- Business Achievements",
+        #                         "- Future Goals",
+        #                     "4. Contact Us, ",
+        #                         "- Location",
+        #                         "- Phone",
+        #                         "- FAQs",
+        #                         "- Team members"
+        #                 ]
+        #             }}
+
+        #         """
+        
+        prompt = f"""
+               <|start_header_id|>system<|end_header_id|>
+                - 당신은 회사 소개 웹사이트의 기획자입니다.
+                - Data는 회사 프로필 또는 회사 소개입니다.
+                - 결과 값은 세 가지 방식으로 출력됩니다.
+                - Data는 아래 샘플 구조를 절대적으로 기반으로 생성되어야 합니다.
+                
+                1. "title_structure": 입력데이터에서 추출한 웹사이트 제목입니다.
+                2. "keywords_structure": 입력데이터에서 추출한 3개의 키워드 리스트입니다.
+                3. "menu_structure": 입력데이터를 기반으로 이중 메뉴 구조로, first_depth는 3~5개, second_depth는 0~4개로 작성됩니다. second_depth에 대한 추가 설명은 필요하지 않습니다. 메뉴 항목은 15자 이내로 작성되어야 합니다.
+                - 추가 텍스트 없이 JSON 객체로만 답변하십시오.
 
                 
                 <|eot_id|><|start_header_id|>user<|end_header_id|>
-                Input data:
+                입력 데이터:
                 {text}
 
                 <|eot_id|><|start_header_id|>assistant<|end_header_id|>
-                **Example Structures:**
+                **샘플 구조:**
 
                 {TITLE_STRUCTURE}
 
@@ -90,27 +138,26 @@ class OllamaClient:
 
                 {MENU_STRUCTURE}
 
-                {{"title_structure": "The Example of Company Introduction",
-                        "keywords_structure": ["Company", "Introduction", "Jellywork"],
+                {{"title_structure": "회사 소개 예시",
+                        "keywords_structure": ["회사", "소개", "젤리워크"],
                         "menu_structure": [
-                            "1. Home, ",
-                            "2. Company Introduction, ",
-                                "- Company History",
-                                "- Company Vision",
-                                "- CEO Message",
-                            "3. Business Overview, ",
-                                "- Business Areas",
-                                "- Business Achievements",
-                                "- Future Goals",
-                            "4. Contact Us, ",
-                                "- Location",
-                                "- Phone",
-                                "- FAQs",
-                                "- Team members"
+                            "1. 홈, ",
+                            "2. 회사 소개, ",
+                                "- 회사 역사",
+                                "- 회사 비전",
+                                "- CEO 메시지",
+                            "3. 사업 개요, ",
+                                "- 사업 영역",
+                                "- 사업 실적",
+                                "- 미래 목표",
+                            "4. 문의하기, ",
+                                "- 위치",
+                                "- 전화",
+                                "- 자주 묻는 질문",
+                                "- 팀 멤버"
                         ]
                     }}
-
-                """
+        """
         payload = {
             "model": model,  # 사용 중인 Ollama 모델 이름으로 변경하세요
             "prompt": prompt,
@@ -177,7 +224,8 @@ def parse_response(response_text):
 
 class OllamaLLM(BaseLLM):
     client: OllamaClient = Field(..., description="OllamaClient instance")
-    model_name: str = Field(default="llama3.2", description="Model name to use with Ollama")
+    model_name: str = Field(default="bllossom", description="Model name to use with Ollama")
+    # model_name: str = Field(default="llama3.2", description="Model name to use with Ollama")
 
     def __init__(self, **data):
         super().__init__(**data)

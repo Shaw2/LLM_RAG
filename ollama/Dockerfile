@@ -17,8 +17,12 @@ RUN apt-get update && apt-get install -y curl dos2unix && rm -rf /var/lib/apt/li
 VOLUME ["/models"]
 
 # Copy entrypoint script and set execute permissions
+COPY llama-3.2-Korean-Bllossom-3B-gguf-Q4_K_M.gguf /usr/local/bin/llama-3.2-Korean-Bllossom-3B-gguf-Q4_K_M.gguf
+COPY gguf_Modelfile /usr/local/bin/Modelfile
+
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN dos2unix /usr/local/bin/entrypoint.sh && chmod +x /usr/local/bin/entrypoint.sh
+RUN dos2unix /usr/local/bin/Modelfile && chmod +x /usr/local/bin/Modelfile
 
 # Use entrypoint.sh as the entry point
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

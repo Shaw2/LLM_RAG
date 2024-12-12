@@ -14,7 +14,8 @@ class ContentChain:
         # 프롬프트 템플릿 설정
         
     # 일괄 처리 방식
-    def run(self, input_text, discriminant, model="llama3.2", value_type = "general"):
+    # def run(self, input_text, discriminant, model="llama3.2", value_type = "general"):
+    def run(self, input_text, discriminant, model="bllossom", value_type = "general"):
         """
         Ollama API 기반 텍스트 생성 체인
         Args:
@@ -25,7 +26,8 @@ class ContentChain:
         Returns:
             str: 최종 생성 결과
         """
-        print("run operation success")
+        print(f"run operation success \n value_type : {value_type}\n model : {model}" )
+        final_output = None
         if value_type == "general":
             
             if discriminant:
@@ -45,7 +47,10 @@ class ContentChain:
 
                 # 영->한 번역
                 final_output = self.en_ko_translator.translate(generated_text)
-                
+        if value_type == 'normal':
+            generated_text = self.ollama_client.generate(model, input_text)
+            print("Generated Text:", generated_text)
+            return generated_text
         # elif value_type == "menu":
         #     translate_list = {}
         #     if discriminant:
@@ -78,7 +83,7 @@ class ContentChain:
         #         print(translate_list,"<----final_output")
         elif value_type == "menu":
             translated_text = None
-            if discriminant:
+            if discriminant and model =='llama3.2':
                 translated_text = self.ko_en_translator.translate_length_limit(input_text)
                 print(f"Translated Input Text  discriminant True: {translated_text} <=====translated_text, discriminant True")
                 generated_text = self.ollama_client.PDF_Menu(model, translated_text)
@@ -121,6 +126,10 @@ class ContentChain:
 
                 print(f"Final Translated Output: {final_output} <----final_output")
                 return final_output
+            elif model == "bllossom":
+                generated_text = self.ollama_client.PDF_Menu(model, input_text)
+                print(f"{generated_text} : generated_text")
+                return generated_text
             else:
                 print(input_text,"<======input_text")
                 generated_text = self.ollama_client.PDF_Menu(model, input_text)

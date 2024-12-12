@@ -41,7 +41,8 @@ class GenerateRequest(BaseModel):
     input_text: str
     # is_korean: bool
     model: str = "llama3.2"  # Ollama 모델 이름, 기본값은 "default"
-    
+    # model: str = "bllossom"  # Ollama 모델 이름, 기본값은 "default"
+    gen_type: str = "normal"
 # API ENDPOINT 일괄처리 방식
 @app.post("/generate")
 async def generate(request: GenerateRequest):
@@ -54,7 +55,10 @@ async def generate(request: GenerateRequest):
         print(discriminant, "<===진행")
 
         # ContentChain에서 결과 생성
-        result = content_chain.run(request.input_text, discriminant, model=request.model, value_type="general")
+        if request.gen_type == "normal":
+            result = content_chain.run(request.input_text, discriminant, model=request.model, value_type=request.gen_type)
+        if request.gen_type == "general":
+            result = content_chain.run(request.input_text, discriminant, model=request.model, value_type=request.gen_type)
         print(f"Final result: {result}")  # 디버깅용 출력
 
         # 스트리밍 데이터 생성
@@ -64,7 +68,8 @@ async def generate(request: GenerateRequest):
                 print(f"Streamed line: {line}")  # 디버깅용 출력
 
         # StreamingResponse로 반환
-        return StreamingResponse(stream_response(), media_type="text/plain")
+        # return StreamingResponse(stream_response(), media_type="text/plain")
+        return {"responese" : result}
 
     except Exception as e:
         # 에러 발생 시 처리
@@ -170,7 +175,8 @@ async def generate_RAG(request: GenerateRequest):
         ollama_client = OllamaClient()  # OllamaClient 객체 생성
         
         # LLM 래퍼 객체 생성
-        ollama_llm = OllamaLLM(client=ollama_client, model_name="llama3.2")
+        # ollama_llm = OllamaLLM(client=ollama_client, model_name="llama3.2")
+        ollama_llm = OllamaLLM(client=ollama_client, model_name="bllossom")
 
         # CustomRAGChain 생성
         custom_chain = CustomRAGChain(
@@ -563,7 +569,8 @@ async def generate_menu(path: str, path2: str='', path3: str=''):
         print(discriminant, "<===진행")
 
         # ContentChain에서 결과 생성
-        result = content_chain.run(all_text, discriminant, model='llama3.2', value_type='menu')
+        # result = content_chain.run(all_text, discriminant, model='llama3.2', value_type='menu')
+        result = content_chain.run(all_text, discriminant, model='bllossom', value_type='menu')
         print(f"Final result: {result}")  # 디버깅용 출력
 
         end = time.time()

@@ -12,4 +12,9 @@ ollama pull nomic-embed-text >> /tmp/entrypoint_debug.log 2>&1
 
 echo "Entrypoint script completed." >> /tmp/entrypoint_debug.log
 
+
+
+ollama create bllossom -f /usr/local/bin/Modelfile
+echo "ollama bllossom creating." >> /tmp/entrypoint_debug.log
+
 wait $server_pid

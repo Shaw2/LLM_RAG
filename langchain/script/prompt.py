@@ -39,34 +39,63 @@ WEB_MENU_TEMPLATE = '''
     - **Context:** Explain the future outlook and major challenges for the selected industry. [Example for the healthcare industry: advancements in AI for diagnostics, expansion of telemedicine services, etc.]
     '''
     
-TITLE_STRUCTURE = """- You can use this example to write down title.
-                    [Title]
-                    The example of title
+# TITLE_STRUCTURE = """- You can use this example to write down title.
+#                     [Title]
+#                     The example of title
+#                     """
+
+# KEYWORDS_STRUCTURE = """- You can use this example to write down keywords.
+#                     [Keywords]
+#                     1. A
+#                     2. B
+#                     3. C
+#                     """
+
+# MENU_STRUCTURE = """- You can use this kind of structure when build two_depth menu. start with 'number' is first_depth menu. start with '-' is second_depth menu.
+#                     [Two_depth Menu]
+#                     1. Home, 
+#                     2. Company Introduction, 
+#                             - Company History,    
+#                             - Company Vision,  
+#                             - CEO Message,                     
+#                     3. Business Overview,    
+#                             - Business Areas, 
+#                             - Business Achievements, 
+#                             - Future Goals,  
+#                     4. Contact Us, 
+#                             - Location,    
+#                             - Phone,    
+#                             - FAQs, 
+#                             - Team members"""
+
+TITLE_STRUCTURE = """- 제목 작성에 이 예제를 사용할 수 있습니다.
+                    [제목]
+                    제목의 예시
                     """
 
-KEYWORDS_STRUCTURE = """- You can use this example to write down keywords.
-                    [Keywords]
+KEYWORDS_STRUCTURE = """- 키워드 작성에 이 예제를 사용할 수 있습니다.
+                    [키워드]
                     1. A
                     2. B
                     3. C
                     """
 
-MENU_STRUCTURE = """- You can use this kind of structure when build two_depth menu. start with 'number' is first_depth menu. start with '-' is second_depth menu.
-                    [Two_depth Menu]
-                    1. Home, 
-                    2. Company Introduction, 
-                            - Company History,    
-                            - Company Vision,  
-                            - CEO Message,                     
-                    3. Business Overview,    
-                            - Business Areas, 
-                            - Business Achievements, 
-                            - Future Goals,  
-                    4. Contact Us, 
-                            - Location,    
-                            - Phone,    
-                            - FAQs, 
-                            - Team members"""
+MENU_STRUCTURE = """- 이중 메뉴를 작성할 때 이 구조를 사용할 수 있습니다. '숫자'로 시작하는 것은 first_depth 메뉴, '-'로 시작하는 것은 second_depth 메뉴입니다.
+                    [이중 메뉴]
+                    1. 홈, 
+                    2. 회사 소개, 
+                            - 회사 역사,    
+                            - 회사 비전,  
+                            - CEO 메시지,                     
+                    3. 사업 개요,    
+                            - 사업 영역, 
+                            - 사업 실적, 
+                            - 미래 목표,  
+                    4. 문의하기, 
+                            - 위치,    
+                            - 전화,    
+                            - 자주 묻는 질문, 
+                            - 팀 멤버"""
 
 CONTENT_STRUCTURE = """ - You can use this when make contents of menues
                     1. Main
