@@ -3,11 +3,12 @@ from config.config import OLLAMA_API_URL
 
 
 class OllamaContentClient:
-    def __init__(self, api_url=OLLAMA_API_URL+'api/generate', temperature=0.01, structure_limit = True):
+    def __init__(self, api_url=OLLAMA_API_URL+'api/generate', temperature=0.2, structure_limit = True, repetition_penalty = 2, n_ctx = 8192):
         self.api_url = api_url
         self.temperature = temperature
         self.structure_limit = structure_limit
-        
+        self.repetition_penalty = repetition_penalty
+        self.n_ctx = n_ctx
     async def send_request(self, model: str, prompt: str) -> str:
         """
         공통 요청 처리 함수: API 호출 및 응답 처리
@@ -16,6 +17,8 @@ class OllamaContentClient:
             "model": model,
             "prompt": prompt,
             "temperature": self.temperature,
+            "repetition_penalty" : self.repetition_penalty,
+            "n_ctx": self.n_ctx
         }
 
         try:
@@ -82,29 +85,31 @@ class OllamaContentClient:
         """
         return await self.send_request(model, prompt)
     
-    async def landing_block_STD(self, model : str= "bllossom", input_text = ""):
+    async def landing_block_STD(self, model : str= "bllossom", input_text = "", section_name = "", section_num = ""):
         
         prompt = f"""
-               <|start_header_id|>system<|end_header_id|>
-                
+                <|start_header_id|>system<|end_header_id|>
+                - 당신은 랜딩페이지의 컨텐츠 내용을 생성하는 친절하고 똑똑한 도우미 AI 입니다.
+                - 랜딩페이지를 만드는데 랜딩페이지를 섹션기준으로 나눴을 때 {section_num}번째의 {section_name}에 컨텐츠 내용을 생성해야합니다.
+                - 절대 code 데이터를 생성하지 마세요.
+                {section_name}
                 <|eot_id|><|start_header_id|>user<|end_header_id|>
                 입력 데이터:
                 {input_text}
 
                 <|eot_id|><|start_header_id|>assistant<|end_header_id|>
-                - 입력 데이터를 기반으로 웹사이트 랜딩 페이지 섹션을 하나의 JSON 객체로만 구성해주세요.
-                - 결과 형식 예시는 다음과 같습니다:
-    
+                - 입력데이터를 기준으로 {section_num}번째의 {section_name}에 적합한 컨텐츠를 생성해주세요.
+                - 절대 code 데이터를 생성하지 마세요.
+                - 컨텐츠 요소를 각 항목별로 정리해주세요.
         """
+        print(f"prompt length : {len(prompt)}")
         return await self.send_request(model, prompt)
         
-    async def LLM_land_page_content_Gen(self, input_text : str = "", model = "bllossom", structure_limit=True):
-        # main landing page content Generate 하기 위해 필요한 코드가 여기에 들어가야함.
-        # ------------------------------------------------
-        cnt = random.randint(6,9)
-        print(f"section count : {cnt}")
+    async def LLM_land_page_content_Gen(self, input_text: str = "", model="bllossom", structure_limit=True):
+        cnt = random.randint(6, 9)
+        print(f"section count: {cnt}")
         try:
-            # 비동기 함수 호출 시 await 사용
+            # 비동기 함수 호출
             section_data = await self.landing_page_STD(model=model, input_text=input_text, section_cnt=cnt)
             print(f"section_data: {section_data}")
 
@@ -113,7 +118,7 @@ class OllamaContentClient:
             print(f"type: {type(section_dict)},\n section_dict: {section_dict}")
 
             if structure_limit:
-                # 문자열 키를 정수로 변환
+                # 키를 정수로 변환
                 section_dict = {int(k): v for k, v in section_dict.items()}
 
                 # 정렬된 키 리스트
@@ -142,13 +147,24 @@ class OllamaContentClient:
 
             print(f"type: {type(section_dict)}, len section data: {len(section_dict)}")
 
+            # 최종 수정된 딕셔너리를 반환
+            return section_dict
+        except Exception as e:
+            print(f"Error generating landing page sections: {e}")
+            raise ValueError("Failed to generate landing page sections.")
+
+    async def LLM_land_block_content_Gen(self, input_text : str = "", model = "bllossom", section_name = "", section_num = "1"):
+        
+        try:
+            # 비동기 함수 호출 시 await 사용
+            contents_data = await self.landing_block_STD(model=model, input_text=input_text, section_name = section_name, section_num = section_num)
+            print(f"section_data: {contents_data}")
+
+
+
             # 최종 수정된 딕셔너리를 JSON 문자열로 변환하여 반환
-            return json.dumps(section_dict)
+            return contents_data
         except Exception as e:
             print(f"Error generating landing page sections: {e}")
             raise ValueError(status_code=500, detail="Failed to generate landing page sections.")
-
-    async def LLM_land_block_content_Gen(self, input_text : str = "", model = "bllossom", section_num = "1", section_kind = ""):
-        
-        try:
             

@@ -1,7 +1,8 @@
 FROM /usr/local/bin/llama-3.2-Korean-Bllossom-3B-gguf-Q4_K_M.gguf
 
-PARAMETER temperature 0.05
-PARAMETER top_p 0.7
+PARAMETER temperature 0.3
+PARAMETER top_p 0.9
+PARAMETER repetition_penalty 2.5
 
 TEMPLATE """<|start_header_id|>system<|end_header_id|>
 
@@ -44,6 +45,10 @@ Respond in the format {"name": function name, "parameters": dictionary of argume
 
 {{ end }}
 {{- end }}
-{{- end }}"""
+{{- end }}
 
-SYSTEM """You are a helpful AI assistant. Please answer the user's questions kindly. 당신은 유능한 AI 어시스턴트 입니다. 사용자의 질문에 대해 친절하게 답변해주세요."""
+{{- /* Add instruction to avoid repetitive responses */ -}}
+Avoid repeating the same content or phrases in your responses.
+"""
+
+SYSTEM """You are a helpful AI assistant. Please answer the user's questions kindly and provide diverse, creative, and accurate responses. 당신은 유능한 AI 어시스턴트 입니다. 사용자의 질문에 대해 친절하고 창의적으로 답변해주세요."""

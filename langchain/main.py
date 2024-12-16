@@ -597,13 +597,23 @@ async def generate_menu(path: str, path2: str='', path3: str=''):
         print(f"Error: {str(e)}")
         return {"error": str(e)}
     
-content_LLM = OllamaContentClient()
-@app.post("/generate_landpage_generate")    
-async def LLM_land_page_generate(input_text : str = "", model = "bllossom", structure_limit = True):
-    # main landing page content Generate 하기 위해 필요한 코드가 여기에 들어가야함.
-    # ------------------------------------------------
+
+@app.post("/generate_land_section")    
+async def LLM_land_page_generate(input_text: str = "", model="bllossom", structure_limit=True):
+    # Main landing page content generation
+    content_LLM = OllamaContentClient()
     landing_structure = await content_LLM.LLM_land_page_content_Gen(input_text=input_text, model=model, structure_limit=structure_limit)
+    print(f"landing_structure : {landing_structure}")
+    # 딕셔너리를 반복 처리
+    for k, v in landing_structure.items():
+        contents_data = await content_LLM.landing_block_STD(
+            model=model,
+            input_text=input_text,
+            section_name=v,
+            section_num=k
+        )
+        print(f"contents_data: {contents_data}\n keys : {k} \n value : {v}")
+        time.sleep(0.5)
     
-    for k, v in landing_structure:
-        
-    
+    # Python 딕셔너리를 FastAPI 응답으로 반환
+    return landing_structure
