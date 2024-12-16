@@ -7,6 +7,7 @@ from pipelines.content_chain import ContentChain
 from utils.helpers import languagechecker, insert_data, create_collection, search_data
 from utils.ollama_embedding import get_embedding_from_ollama, get_embedding_from_ollama, OllamaEmbeddings
 from utils.ollama_client import OllamaClient, OllamaLLM
+from utils.ollama_content import OllamaContentClient
 from utils.RAGChain import CustomRAGChain
 from utils.PDF2TXT import PDF2TEXT
 from script.prompt import RAG_TEMPLATE, WEB_MENU_TEMPLATE
@@ -26,9 +27,9 @@ from pydantic import BaseModel
 from typing import Dict
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-import requests
+import requests, json
 from io import BytesIO
-import time
+import time, random
 import torch, gc
 
 app = FastAPI()
@@ -594,4 +595,15 @@ async def generate_menu(path: str, path2: str='', path3: str=''):
     except Exception as e:
         # 에러 발생 시 처리
         print(f"Error: {str(e)}")
-        return {"error": str(e)}#
+        return {"error": str(e)}
+    
+content_LLM = OllamaContentClient()
+@app.post("/generate_landpage_generate")    
+async def LLM_land_page_generate(input_text : str = "", model = "bllossom", structure_limit = True):
+    # main landing page content Generate 하기 위해 필요한 코드가 여기에 들어가야함.
+    # ------------------------------------------------
+    landing_structure = await content_LLM.LLM_land_page_content_Gen(input_text=input_text, model=model, structure_limit=structure_limit)
+    
+    for k, v in landing_structure:
+        
+    

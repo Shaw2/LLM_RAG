@@ -4,3 +4,4 @@ from .ollama_embedding import  get_embedding_from_ollama, get_embedding_from_oll
 from .RAGChain import  CustomRAGChain
 from .milvus_collection import CONTENTS_COLLECTION_MILVUS_STD
 from .PDF2TXT import PDF2TEXT
+from .ollama_content import OllamaContentClient

@@ -6,8 +6,7 @@ from langchain.llms.base import BaseLLM
 from config.config import OLLAMA_API_URL
 from langchain.schema import LLMResult
 from pydantic import Field
-from script.prompt import MENU_STRUCTURE, TITLE_STRUCTURE, KEYWORDS_STRUCTURE, CONTENT_STRUCTURE
-from langchain.prompts import PromptTemplate
+from script.prompt import MENU_STRUCTURE, TITLE_STRUCTURE, KEYWORDS_STRUCTURE
 import re
 class OllamaClient:
     def __init__(self, api_url=OLLAMA_API_URL+'api/generate', temperature=0.05):

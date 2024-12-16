@@ -15,7 +15,7 @@ class ContentChain:
         
     # 일괄 처리 방식
     # def run(self, input_text, discriminant, model="llama3.2", value_type = "general"):
-    def run(self, input_text, discriminant, model="bllossom", value_type = "general"):
+    def run(self, input_text, discriminant=False, model="bllossom", value_type = "general"):
         """
         Ollama API 기반 텍스트 생성 체인
         Args:
