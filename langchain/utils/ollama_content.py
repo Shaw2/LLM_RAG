@@ -25,6 +25,7 @@ class OllamaContentClient:
             "prompt": prompt,
             "temperature": self.temperature,
             "n_ctx": self.n_ctx,
+            "repetition penalty":1.2
         }
 
         try:
@@ -48,54 +49,80 @@ class OllamaContentClient:
             print(f"HTTP 요청 실패: {e}")
             raise RuntimeError(f"Ollama API 요청 실패: {e}")
         
-    async def contents_GEN(self, model : str= "bllossom", input_text = ""):
+    async def contents_GEN(self, model : str= "bllossom", input_text = "", section_name=""):
 
         prompt = f"""
                 <|start_header_id|>system<|end_header_id|>
-                - 당신은 입력된 텍스트를 기반으로 콘텐츠를 생성하는 AI 도우미입니다.
-                - 입력된 텍스트를 분석하여 **핵심 키워드 2개**를 먼저 추출합니다.
-                - 핵심 키워드를 중심으로 웹사이트 콘텐츠를 작성하되 다음 조건을 반드시 지켜야 합니다:
-                1. 본문은 400자 이내여야 합니다.
-                2. 입력된 텍스트의 주요 내용만 사용하며, 추가적인 창작이나 불필요한 정보는 포함하지 마세요.
-                3. 핵심 키워드를 적절히 활용해 사용자에게 명확한 정보를 전달하세요.
-
+                - 너는 사이트의 섹션 구조를 정해주고, 그 안에 들어갈 내용을 작성해주는 도우미야.
+                - 입력 데이터를 기준으로 단일 페이지를 갖는 랜딩사이트 출력 예시를 생성해.
+                - {section_name}섹션에 알맞게 구성하여 컨텐츠를 만들건데, "h1, h2, h3, p" 태그를 이용해서 각 컨텐츠를 구성해줘.
+                - 섹션 안의 콘텐츠의 개수는 섹션의 흐름에 맞게 2~6개 중 자유롭게 선택해서 생성해줘.
                 <|eot_id|><|start_header_id|>user<|end_header_id|>
                 입력 데이터:
                 {input_text}
-
+                섹션:
+                {section_name}
                 <|eot_id|><|start_header_id|>assistant<|end_header_id|>
-                - 출력형식을 제외하고 다른 정보는 출력하지마세요.
-                - 출력 형식 안의 본문내용이 400자를 넘어서 생성하면 안됩니다.
-                **출력 형식**:
+                - 출력 예시의 형식을 벗어나면 절대 안돼.
+                - 안에 있는 text 내용들은 입력 데이터를 기준으로 생성해.
+                - 절대 코드를 생성해서 출력하면 안돼.
+                - 입력데이터와 섹션 구조를 토대로 작업해줘.
+                - 컨텐츠 출력 타입으로는 "h1, h2, h3, p"네가지만 사용해서 생성해줘.
+                - 출력은 한글로만해.
+                출력 예시:
+
                 {{
-                    "핵심 키워드": ["키워드1", "키워드2"],
-                    "본문": "여기에 키워드를 활용해 400자 이내로 확장된 내용을 작성하세요. 입력된 텍스트의 주요 정보를 기반으로 하며, 명확하고 구체적인 내용만 포함합니다."
+                    {{
+                        "type": "LANDING_PAGE",
+                        "children": [
+                                #=========== SECTION_1 ===========#
+                                {{
+                                    "type": "HERO_SECTION", 
+                                    "children": [
+                                        #=========== CONTENT_1 ===========#
+                                        {{
+                                            "type": "h1",
+                                            "text": "사과의 중요성",
+                                        }},
+                                        #=========== CONTENT_2 ===========#
+                                        {{
+                                            "type": "p",
+                                            "text": "토양은 사과 재배에 매우 중요한 요소입니다. 농부는 토양의 pH 수준을 조절하고, 필요시 보충제를 추가하여 적절한 영양소를 공급합니다."
+                                        }}
+                                    ]
+                                }},
+                            ]
+                        }},
+                    ]
                 }}
                 """
         return await self.send_request(model, prompt)
     
     async def landing_block_STD(self, model : str= "bllossom", input_text :str = "", section_name=""):
         prompt = f"""
-                <|start_header_id|>system<|end_header_id|>
-                - 당신은 AI 랜딩페이지 콘텐츠 작성 도우미입니다.
-                - 입력된 데이터를 기반으로 랜딩페이지의 적합한 콘텐츠를 작성하세요.
-                - 반드시 입력 데이터를 기반으로 작성하며, 추가적인 내용은 절대 생성하지 마세요.
-                - 섹션에 이름에 해당하는 내용 구성들로 내용 생성하세요.
-                - 콘텐츠를 JSON 형태로 작성하세요.
+            <|start_header_id|>system<|end_header_id|>
+            - 당신은 AI 랜딩페이지 콘텐츠 작성 도우미입니다.
+            - 입력된 데이터를 기반으로 랜딩페이지의 적합한 콘텐츠를 작성하세요.
+            - 반드시 입력 데이터를 기반으로 작성하며, 추가적인 내용은 절대 생성하지 마세요.
+            - 섹션에 이름에 해당하는 내용 구성들로 내용 생성하세요.
+            - 콘텐츠를 JSON 형태로 작성하세요.
 
-                <|eot_id|><|start_header_id|>user<|end_header_id|>
-                입력 데이터:
-                {input_text}
-                
-                섹션:
-                {section_name}
+            <|eot_id|><|start_header_id|>user<|end_header_id|>
+            입력 데이터:
+            {input_text}
+            
+            섹션:
+            {section_name}
 
-                <|eot_id|><|start_header_id|>assistant<|end_header_id|>
-                **출력 형식**:
-                {{"###타이틀" : "타이틀 내용",
-                "####서브타이틀" : (선택사항)"서브타이틀 내용",
-                "본문" : "본문내용"}}
-                """
+            <|eot_id|><|start_header_id|>assistant<|end_header_id|>
+            - 출력형식을 제외하고 다른 정보는 출력하지마세요.
+            - 출력은 JSON형태로만 출력하세요.
+            **출력 예시**:
+            {{"h1" : "타이틀 내용",
+            "h2" : (선택사항)"서브타이틀 내용",
+            "h3" : 
+            "본문" : "본문내용"}}
+            """
                 
         print(f"prompt length : {len(prompt)}")
         return await self.send_request(model, prompt)

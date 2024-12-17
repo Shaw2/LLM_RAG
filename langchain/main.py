@@ -629,42 +629,43 @@ async def LLM_land_page_generate(request: LandPageRequest):
         landing_structure = dict(sorted(section_dict.items()))
         
         print(f"Generated landing structure: {landing_structure}")
-        content = await content_client.contents_GEN(input_text=request.input_text)
-        print(f"Generated content : {content}")
+        # content = await content_client.contents_GEN(input_text=request.input_text)
+        # print(f"Generated content : {content}")
 
         # STEP 2: 콘텐츠 데이터 생성
         final_contents = {}
         for section_num, section_name in landing_structure.items():
-            print(f"Processing section: {section_num}, Name: {section_name}")
-            section_content = await content_client.landing_block_STD(model="bllossom", input_text=content, section_name=section_name)
-            # 섹션별 콘텐츠 생성
-            print(f"Contents for {section_name}: {section_content}")
+            content = await content_client.contents_GEN(input_text=request.input_text, section_name=section_name)
+            print(f"Processing section: {section_num}, Name: {content}")
+            # section_content = await content_client.landing_block_STD(model="bllossom", input_text=content, section_name=section_name)
+        #     # 섹션별 콘텐츠 생성
+        #     print(f"Contents for {section_name}: {section_content}")
 
-            # 최종 구조에 추가
-            final_contents[section_num] = {
-                "section_name": section_name,
-                "contents_data": section_content
-            }
+        #     # 최종 구조에 추가
+        #     final_contents[section_num] = {
+        #         "section_name": section_name,
+        #         "contents_data": section_content
+        #     }
 
-        print(f"Final contents: {final_contents}")
+        # print(f"Final contents: {final_contents}")
 
-        # STEP 3: 최종 결과 반환
-        result_dict = {
-            "text": "",
-            "type": "LANDING",
-            "metadata": {},
-            "children": [
-                {
-                    "type": "LANDING_PAGE",
-                    "metadata": {"Key1": "Value", "Key2": "Value"},
-                    "children": [
-                        {"section": key, "name": value["section_name"], "content": value["contents_data"]}
-                        for key, value in final_contents.items()
-                    ]
-                }
-            ]
-        }
-        return result_dict
+        # # STEP 3: 최종 결과 반환
+        # result_dict = {
+        #     "text": "",
+        #     "type": "LANDING",
+        #     "metadata": {},
+        #     "children": [
+        #         {
+        #             "type": "LANDING_PAGE",
+        #             "metadata": {"Key1": "Value", "Key2": "Value"},
+        #             "children": [
+        #                 {"section": key, "name": value["section_name"], "content": value["contents_data"]}
+        #                 for key, value in final_contents.items()
+        #             ]
+        #         }
+        #     ]
+        # }
+        return content
 
     except json.JSONDecodeError as e:
         print(f"Invalid JSON format: {e}")
