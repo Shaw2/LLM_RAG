@@ -5,9 +5,9 @@
 from config.config import MILVUS_HOST, MILVUS_PORT
 from pipelines.content_chain import ContentChain
 from utils.helpers import languagechecker, insert_data, create_collection, search_data
-from utils.ollama_embedding import get_embedding_from_ollama, get_embedding_from_ollama, OllamaEmbeddings
+from utils.ollama_embedding import get_embedding_from_ollama, OllamaEmbeddings, embedding_from_ollama
 from utils.ollama_client import OllamaClient, OllamaLLM
-from utils.ollama_content import OllamaContentClient
+from utils.ollama_content import OllamaContentClient, OllamaConversationHandler
 from utils.RAGChain import CustomRAGChain
 from utils.PDF2TXT import PDF2TEXT
 from script.prompt import RAG_TEMPLATE, WEB_MENU_TEMPLATE
@@ -598,22 +598,155 @@ async def generate_menu(path: str, path2: str='', path3: str=''):
         return {"error": str(e)}
     
 
-@app.post("/generate_land_section")    
-async def LLM_land_page_generate(input_text: str = "", model="bllossom", structure_limit=True):
-    # Main landing page content generation
-    content_LLM = OllamaContentClient()
-    landing_structure = await content_LLM.LLM_land_page_content_Gen(input_text=input_text, model=model, structure_limit=structure_limit)
-    print(f"landing_structure : {landing_structure}")
-    # 딕셔너리를 반복 처리
-    for k, v in landing_structure.items():
-        contents_data = await content_LLM.landing_block_STD(
-            model=model,
-            input_text=input_text,
-            section_name=v,
-            section_num=k
-        )
-        print(f"contents_data: {contents_data}\n keys : {k} \n value : {v}")
-        time.sleep(0.5)
-    
-    # Python 딕셔너리를 FastAPI 응답으로 반환
-    return landing_structure
+# 엔드포인트 정의
+@app.post("/generate_land_section")
+async def LLM_land_page_generate(input_text: str = "", model: str = "bllossom", structure_limit: bool = True):
+    """
+    랜딩 페이지 섹션 생성을 처리하는 API 엔드포인트
+    """
+    try:
+        # OllamaContentClient와 ConversationHandler 초기화
+        content_client = OllamaContentClient()
+        handler = OllamaConversationHandler(model=model, client=content_client)
+
+        # STEP 1: 랜딩 구조 생성
+        """
+        랜딩 페이지 섹션을 생성하고 JSON 구조로 반환합니다.
+        """
+        # 섹션 리스트
+        section_options = ["Introduce", "Solution", "Features", "Social", 
+                        "CTA", "Pricing", "About Us", "Team","blog"]
+
+        # 섹션 수 결정 (6 ~ 9개)
+        section_cnt = random.randint(6, 9)
+        print(f"Selected section count: {section_cnt}")
+
+        # 1번과 2번 섹션은 고정
+        section_dict = {
+            1: "Header",
+            2: "Hero"
+        }
+
+        # 마지막 섹션은 Footer로 고정
+        section_dict[section_cnt] = "Footer"
+
+        # 마지막 이전 섹션에 FAQ, Map, Youtube 중 하나 배정
+        minus_one_sections = ["FAQ", "Map", "Youtube", "Contact", "Support"]
+        section_dict[section_cnt - 1] = random.choice(minus_one_sections)
+
+        # 나머지 섹션을 랜덤하게 채움
+        filled_indices = {1, 2, section_cnt - 1, section_cnt}
+        for i in range(3, section_cnt):
+            if i not in filled_indices:
+                section_dict[i] = random.choice(section_options)
+
+        # 섹션 번호 순서대로 정렬
+        sorted_section_dict = dict(sorted(section_dict.items()))
+
+        # JSON 문자열 반환
+        result_json = json.dumps(sorted_section_dict, indent=4)
+
+        landing_structure = result_json
+        # landing_structure = await content_client.LLM_land_page_content_Gen(
+        #     input_text=input_text, model=model, structure_limit=structure_limit
+        # )
+        # # STEP 2.2: 요약 데이터 생성
+        # chunk = embedding_from_ollama(text = input_text)
+        # print(chunk,"<=======chunk")
+        # all_results =[]
+        # summary = None
+        # for idx, chunk in enumerate(chunk):
+            
+        #     summary = await content_client.send_request(
+        #         model=model,
+        #         prompt=f"""
+        #             <|start_header_id|>system<|end_header_id|>
+        #             당신은 입력 데이터를 요약하는 전문 AI 어시스턴트입니다.
+        #             다음 데이터를 간결하고 핵심 내용만 포함한 요약으로 작성하세요.
+        #             <|eot_id|><|start_header_id|>user<|end_header_id|>
+        #             입력 데이터:
+        #             {input_text}
+
+        #             <|eot_id|><|start_header_id|>assistant<|end_header_id|>
+        #             1. 입력 데이터의 본질적 의미 정확히 파악
+        #             2. 원문의 핵심 메시지를 20-30% 길이로 압축
+        #             3. 명확하고 간결한 문장 구조 사용
+        #             4. 정보의 손실 최소화
+        #             5. 읽기 쉽고 이해하기 쉬운 요약문 작성
+        #         """
+        #     )
+        #     all_results.append(summary)
+        # all_results = " ".join(all_results)
+        # print(f"summary: {all_results}")
+        print(f"Landing structure: {landing_structure}")
+        
+
+        # JSON 문자열을 딕셔너리로 변환 (필요 시)
+        if isinstance(landing_structure, str):
+            landing_structure = json.loads(landing_structure)
+
+        # 최종 데이터를 저장할 딕셔너리
+        final_contents = {}
+
+        # STEP 2: 키별로 섹션 데이터 생성
+        for section_num, section_name in landing_structure.items():
+            print(f"Processing section: {section_num}, Name: {section_name}")
+            
+            
+
+            # STEP 2.3: 콘텐츠 데이터 생성
+            contents_data = await handler.handle_conversation(
+                input_text=input_text,
+                section_name=section_name,
+                section_num=section_num,
+                summary=input_text
+            )
+            print(f"Contents for {section_name}: {contents_data}")
+
+            # STEP 2.4: 섹션 데이터를 최종 딕셔너리에 추가
+            final_contents[section_num] = {
+                "section_name": section_name,
+                "summary": section_name,
+                "contents_data": contents_data,
+            }
+
+        # 최종 응답 데이터 반환
+        return final_contents
+
+    except json.JSONDecodeError as e:
+        print(f"Invalid JSON format: {e}")
+        raise HTTPException(status_code=500, detail="Failed to parse JSON response.")
+    except Exception as e:
+        print(f"Error processing landing structure: {e}")
+        raise HTTPException(status_code=500, detail="Error processing landing structure.")
+
+
+# @app.post("/generate_land_section")    
+# async def LLM_land_page_generate(input_text: str = "", model="bllossom", structure_limit=True):
+#     # Main landing page content generation
+#     content_LLM = OllamaContentClient()
+#     landing_structure = await content_LLM.LLM_land_page_content_Gen(input_text=input_text, model=model, structure_limit=structure_limit)
+#     print(f"landing_structure : {landing_structure}")
+#     try:
+#         # JSON 문자열을 딕셔너리로 변환
+#         if isinstance(landing_structure, str):
+#             landing_structure = json.loads(landing_structure)
+#         summary = content_LLM.LLM_summary(model=model, input_text=input_text)
+#         # 딕셔너리 반복 처리
+#         for k, v in landing_structure.items():
+#             contents_data = await content_LLM.LLM_land_block_content_Gen(
+#                 model=model,
+#                 input_text=input_text,
+#                 section_name=v,
+#                 section_num=k,
+#                 summary = summary
+#             )
+#             print(f"keys : {k}, value : {v}\n contents_data: {contents_data}")
+        
+#         return landing_structure
+#     except json.JSONDecodeError as e:
+#         print(f"Invalid JSON format: {landing_structure}")
+#         raise HTTPException(status_code=500, detail="Failed to parse JSON from LLM response.")
+#     except Exception as e:
+#         print(f"Error processing landing structure: {e}")
+#         raise HTTPException(status_code=500, detail="Error processing landing structure.")

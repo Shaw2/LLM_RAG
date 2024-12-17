@@ -44,12 +44,64 @@ class TextData(BaseModel):
 #         return []  # 요청 실패 시 빈 리스트 반환
 
 
+# import sentencepiece as spm
 
-def split_text(text: str, max_length: int = MAX_LENGTH) -> List[str]:
-    """
-    텍스트를 max_length 단위로 분할.
-    """
-    return [text[i:i+max_length] for i in range(0, len(text), max_length)]
+# def split_text_by_tokens(text: str, max_tokens: int, tokenizer_model: str = "tokenizer.model") -> List[str]:
+#     """
+#     SentencePiece 토크나이저를 사용해 텍스트를 토큰 단위로 분할.
+#     """
+#     sp = spm.SentencePieceProcessor()
+#     sp.load(tokenizer_model)  # tokenizer.model 파일 로드
+
+#     tokens = sp.encode(text, out_type=str)  # 텍스트를 토큰 리스트로 변환
+#     chunks = []
+#     current_chunk = []
+
+#     for token in tokens:
+#         current_chunk.append(token)
+#         if len(current_chunk) >= max_tokens:
+#             chunks.append("".join(current_chunk))
+#             current_chunk = []
+
+#     # 마지막 청크 처리
+#     if current_chunk:
+#         chunks.append("".join(current_chunk))
+
+#     return chunks
+
+# def get_embedding_from_ollama(text: str, max_tokens: int = 512) -> List[List[float]]:
+#     """
+#     Ollama API를 호출해 긴 텍스트를 분할한 후 임베딩 생성.
+#     """
+#     headers = {
+#         "Content-Type": "application/json"
+#     }
+
+#     # 텍스트 분할
+#     text_chunks = split_text_by_tokens(text, max_tokens)
+#     embeddings = []
+
+#     # 각 텍스트 조각에 대해 API 호출
+#     for idx, chunk in enumerate(text_chunks):
+#         data = {
+#             "model": "nomic-embed-text",  # 사용 모델
+#             "input": chunk  # 텍스트 조각
+#         }
+#         print(f"Processing chunk {idx + 1}/{len(text_chunks)}: {chunk}")
+
+#         try:
+#             response = requests.post(OLLAMA_API_URL + 'api/embed', headers=headers, json=data)
+#             if response.status_code == 200:
+#                 response_data = response.json()
+#                 embedding = response_data.get("embedding", [])
+#                 embeddings.append(embedding)
+#             else:
+#                 print("Error:", response.json())
+#         except requests.exceptions.RequestException as e:
+#             print(f"Request failed for chunk {idx + 1}: {e}")
+    
+#     # 모든 조각의 임베딩 반환
+#     return embeddings
 
 def get_embedding_from_ollama(text: str) -> List[float]: 
     headers = {"Content-Type": "application/json"} 
@@ -74,6 +126,72 @@ def get_embedding_from_ollama(text: str) -> List[float]:
         print(f"[ERROR] Ollama API responded with error: {error_message}") 
         raise ValueError(f"Failed to get embedding from Ollama: {error_message}")
 
+
+def get_max_tokens(text: str, model: str) -> int:
+    """
+    Ollama 서버로 토큰 수를 확인하는 요청을 보냄
+    """
+    headers = {"Content-Type": "application/json"}
+    payload = {
+        "model": model,
+        "prompt": text
+    }
+    try:
+        response = requests.post(f"{OLLAMA_API_URL}/tokens", headers=headers, json=payload)
+        response.raise_for_status()
+        token_count = response.json().get("tokens", 0)
+        return token_count
+    except requests.exceptions.RequestException as e:
+        print(f"Error getting token count: {e}")
+        return 0
+
+def split_text_by_server(text: str, max_tokens: int) -> list:
+    """
+    텍스트를 Ollama 서버의 최대 토큰 길이 기준으로 분할
+    """
+    words = text.split()
+    chunks = []
+    current_chunk = ""
+
+    for word in words:
+        test_chunk = f"{current_chunk} {word}".strip()
+        token_count = get_max_tokens(test_chunk, model="nomic-embed-text")
+        
+        if token_count > max_tokens:
+            chunks.append(current_chunk.strip())
+            current_chunk = word
+        else:
+            current_chunk = test_chunk
+
+    if current_chunk:
+        chunks.append(current_chunk.strip())
+    
+    return chunks
+
+def embedding_from_ollama(text: str, max_tokens: int = 512) -> list:
+    """
+    Ollama 서버에 텍스트를 분할하여 요청하고 임베딩 생성
+    """
+    headers = {"Content-Type": "application/json"}
+    text_chunks = split_text_by_server(text, max_tokens)
+    embeddings = []
+
+    for idx, chunk in enumerate(text_chunks):
+        payload = {
+            "model": "nomic-embed-text",
+            "input": chunk
+        }
+        print(f"Processing chunk {idx + 1}/{len(text_chunks)}: {chunk}")
+
+        try:
+            response = requests.post(f"{OLLAMA_API_URL}/embed", headers=headers, json=payload)
+            response.raise_for_status()
+            embedding = response.json().get("embedding", [])
+            embeddings.append(embedding)
+        except requests.exceptions.RequestException as e:
+            print(f"Request failed for chunk {idx + 1}: {e}")
+    
+    return embeddings
 class OllamaEmbeddings(Embeddings):
     def embed_query(self, text: str) -> List[float]:
         if isinstance(text, dict) and "query" in text:
