@@ -8,7 +8,7 @@ from typing import List
 from utils.ollama_embedding import get_embedding_from_ollama
 
 class OllamaContentClient:
-    def __init__(self, api_url=OLLAMA_API_URL+'api/generate', temperature=0.1, structure_limit = True,  n_ctx = 4196, max_token = 2048):
+    def __init__(self, api_url=OLLAMA_API_URL+'api/generate', temperature=0.4, structure_limit = True,  n_ctx = 4196, max_token = 2048):
         self.api_url = api_url
         self.temperature = temperature
         self.structure_limit = structure_limit
@@ -48,63 +48,56 @@ class OllamaContentClient:
             print(f"HTTP 요청 실패: {e}")
             raise RuntimeError(f"Ollama API 요청 실패: {e}")
         
-    async def landing_page_STD(self, model : str= "bllossom", input_text = "", section_cnt = 6):
+    async def contents_GEN(self, model : str= "bllossom", input_text = ""):
 
         prompt = f"""
-            <|start_header_id|>system<|end_header_id|>
-                - 당신은 회사 소개 웹사이트의 기획자입니다.
-                - 입력 데이터는 만들고자하는 페이지 설명입니다.
-                - 반드시 JSON 형식으로만 응답하세요. JSON 외의 다른 텍스트나 추가 설명은 절대 포함하지 마세요.
-                
+                <|start_header_id|>system<|end_header_id|>
+                - 당신은 입력된 텍스트를 기반으로 콘텐츠를 생성하는 AI 도우미입니다.
+                - 입력된 텍스트를 분석하여 **핵심 키워드 2개**를 먼저 추출합니다.
+                - 핵심 키워드를 중심으로 웹사이트 콘텐츠를 작성하되 다음 조건을 반드시 지켜야 합니다:
+                1. 본문은 400자 이내여야 합니다.
+                2. 입력된 텍스트의 주요 내용만 사용하며, 추가적인 창작이나 불필요한 정보는 포함하지 마세요.
+                3. 핵심 키워드를 적절히 활용해 사용자에게 명확한 정보를 전달하세요.
+
                 <|eot_id|><|start_header_id|>user<|end_header_id|>
                 입력 데이터:
                 {input_text}
 
                 <|eot_id|><|start_header_id|>assistant<|end_header_id|>
-                - 입력데이터를 기반으로 웹사이트 랜딩페이지 순서를 정해주세요.
-                - 랜딩 페이지의 섹션 개수는{section_cnt}입니다. 
-                - 섹션 개수는 9개를 초과할 수 없어요.
-                - 입력데이터를 랜딩페이지의 흐름 기준으로 적절히 알맞게 추천해주세요.
-                - 섹션의 종류는 Introduce, Solution, Features, Social, Use Cases, Comparison, CTA, FAQ, Pricing, About Us, Team, Contact, Support, Newsletter, Subscription, Blog, Content 입니다.
-                - 절대 code 데이터를 생성하지 마세요.
-                - 반드시 JSON 형식으로만 응답하세요. JSON 외의 다른 텍스트나 추가 설명은 절대 포함하지 마세요.
-                - 결과 형식 예시는 다음과 같습니다:
+                - 출력형식을 제외하고 다른 정보는 출력하지마세요.
+                - 출력 형식 안의 본문내용이 400자를 넘어서 생성하면 안됩니다.
+                **출력 형식**:
                 {{
-                    "1": "Header",
-                    "2": "Hero",
-                    "3": "Features",
-                    "4": "Content",
-                    "5": "Pricing",
-                    "6": "About Us",
-                    "7": "Social",
-                    "8": "Map",
-                    "9": "Footer"
+                    "핵심 키워드": ["키워드1", "키워드2"],
+                    "본문": "여기에 키워드를 활용해 400자 이내로 확장된 내용을 작성하세요. 입력된 텍스트의 주요 정보를 기반으로 하며, 명확하고 구체적인 내용만 포함합니다."
                 }}
-        """
+                """
         return await self.send_request(model, prompt)
-    async def landing_block_STD(self, model : str= "bllossom", input_text = "", section_name = "", section_num = ""):
-        
-       
+    
+    async def landing_block_STD(self, model : str= "bllossom", input_text :str = "", section_name=""):
         prompt = f"""
                 <|start_header_id|>system<|end_header_id|>
-                - AI 랜딩페이지 컨텐츠 생성 도우미
-                - 한글로 답변
+                - 당신은 AI 랜딩페이지 콘텐츠 작성 도우미입니다.
+                - 입력된 데이터를 기반으로 랜딩페이지의 적합한 콘텐츠를 작성하세요.
+                - 반드시 입력 데이터를 기반으로 작성하며, 추가적인 내용은 절대 생성하지 마세요.
+                - 섹션에 이름에 해당하는 내용 구성들로 내용 생성하세요.
+                - 콘텐츠를 JSON 형태로 작성하세요.
 
                 <|eot_id|><|start_header_id|>user<|end_header_id|>
                 입력 데이터:
                 {input_text}
                 
-                섹션 이름:
+                섹션:
                 {section_name}
 
                 <|eot_id|><|start_header_id|>assistant<|end_header_id|>
-                - 입력 데이터 기반 컨텐츠 생성
-                - {section_name}에 해당하는 컨텐츠 생성
-                - 보고서 형식
-                - 코드 생성 금지
-                - 한글 작성
-        """
-
+                **출력 형식**:
+                {{"###타이틀" : "타이틀 내용",
+                "####서브타이틀" : (선택사항)"서브타이틀 내용",
+                "본문" : "본문내용"}}
+                """
+                
+        print(f"prompt length : {len(prompt)}")
         return await self.send_request(model, prompt)
     # async def landing_block_STD(self, model : str= "bllossom", input_text = "", section_name = "", section_num = ""):
         
@@ -210,8 +203,6 @@ class OllamaContentClient:
                 <|eot_id|><|start_header_id|>user<|end_header_id|>
                 입력 데이터:
                 {input_text}
-                요약 데이터:
-                {summary}
 
                 <|eot_id|><|start_header_id|>assistant<|end_header_id|>
                 - 요약 데이터를 바탕으로 입력 데이터에서 필요한 내용을 도출하여 작성합니다.
@@ -339,53 +330,3 @@ class OllamaContentClient:
         except Exception as e:
             print(f"Error generating landing page sections: {e}")
             raise HTTPException(status_code=500, detail="Failed to generate landing page sections.")
-        
-    
-from typing import Dict, Any
-import asyncio
-
-class OllamaConversationHandler:
-    def __init__(self, model: str, client: OllamaContentClient):
-        self.model = model
-        self.client = client
-        self.context = ""
-
-    async def handle_conversation(self, input_text: str, section_name: str, section_num: str, summary: str = "") -> str:
-        """
-        대화형으로 랜딩 페이지 컨텐츠를 생성하고 결과를 반환.
-        """
-        try:
-            # 요약 데이터 생성
-            if not summary:
-                summary = await self.client.send_request(
-                    model=self.model,
-                    prompt=f"입력 데이터:\n{input_text}\n\n- 데이터를 요약하여 제공\n- 한글로 요약 작성"
-                )
-                self.context += f"\nAI (Summary): {summary}\n"
-
-            # STD 데이터 생성
-            std_data = await self.client.landing_block_STD(
-                model=self.model,
-                input_text=input_text,
-                section_name=section_name,
-                section_num=section_num
-            )
-            self.context += f"\nUser Input: {input_text}\nAI (STD): {std_data}\n"
-
-            # 콘텐츠 채우기
-            filled_data = await self.client.LLM_content_fill(
-                model=self.model,
-                input_text=std_data,
-                summary=summary
-            )
-            self.context += f"\nAI (Filled Content): {filled_data}\n"
-
-            return filled_data
-        except Exception as e:
-            print(f"Error in conversation handling: {e}")
-            raise
-
-
-
-
-    

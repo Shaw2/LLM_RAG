@@ -90,6 +90,8 @@ services:
     environment:
       - OLLAMA_API_PORT=11434
       - OLLAMA_HOST=0.0.0.0:11434
+      - CUDA_VISIBLE_DEVICES=0  # GPU 0번만 사용
+      - TF_FORCE_GPU_ALLOW_GROWTH=true  # 메모리 동적 할당
     networks:
       - service_network
     deploy:
@@ -113,6 +115,8 @@ services:
     environment:
       - ollama_IP=172.19.0.6
       # - ollama_IP=host.docker.internal
+      - CUDA_VISIBLE_DEVICES=0  # GPU 0번만 사용
+      - TF_FORCE_GPU_ALLOW_GROWTH=true  # 메모리 동적 할당
     networks:
       - service_network
     command: uvicorn main:app --host 0.0.0.0 --port 8001 --reload  # Uvicorn 실행 명령어
