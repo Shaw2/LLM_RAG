@@ -17,4 +17,6 @@ echo "Entrypoint script completed." >> /tmp/entrypoint_debug.log
 ollama create bllossom -f /usr/local/bin/Modelfile
 echo "ollama bllossom creating." >> /tmp/entrypoint_debug.log
 
+ollama create solar -f /usr/local/bin/EEVE_Modelfile
+
 wait $server_pid
