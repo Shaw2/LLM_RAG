@@ -20,6 +20,9 @@ VOLUME ["/models"]
 COPY llama-3.2-Korean-Bllossom-3B-gguf-Q4_K_M.gguf /usr/local/bin/llama-3.2-Korean-Bllossom-3B-gguf-Q4_K_M.gguf
 COPY gguf_Modelfile /usr/local/bin/Modelfile
 
+COPY EEVE_Modelfile /usr/local/bin/EEVE_Modelfile
+COPY EEVE-Korean-Instruct-10.8B-v1.0-Q4_K_M.gguf /usr/local/bin/EEVE-Korean-Instruct-10.8B-v1.0-Q4_K_M.gguf
+
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN dos2unix /usr/local/bin/entrypoint.sh && chmod +x /usr/local/bin/entrypoint.sh
 RUN dos2unix /usr/local/bin/Modelfile && chmod +x /usr/local/bin/Modelfile

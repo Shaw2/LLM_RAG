@@ -15,7 +15,7 @@ class ContentChain:
         
     # 일괄 처리 방식
     # def run(self, input_text, discriminant, model="llama3.2", value_type = "general"):
-    def run(self, input_text, discriminant=False, model="bllossom", value_type = "general"):
+    def run(self, input_text, discriminant=False, model="solar", value_type = "general"):
         """
         Ollama API 기반 텍스트 생성 체인
         Args:
@@ -90,7 +90,7 @@ class ContentChain:
                 print(f"Final Translated Output: {final_output} <----final_output")
                 return final_output
             
-            elif model == "bllossom":
+            elif model == "solar":
                 generated_text = self.ollama_client.PDF_Menu(model, input_text)
                 print(f"{generated_text} : generated_text")
                 return generated_text

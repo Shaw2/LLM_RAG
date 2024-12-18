@@ -8,7 +8,7 @@ from typing import List
 from utils.ollama_embedding import get_embedding_from_ollama
 
 class OllamaContentClient:
-    def __init__(self, api_url=OLLAMA_API_URL+'api/generate', temperature=0.4, structure_limit = True,  n_ctx = 4196, max_token = 2048):
+    def __init__(self, api_url=OLLAMA_API_URL+'api/generate', temperature=0.4, structure_limit = True,  n_ctx = 4196, max_token = 4196):
         self.api_url = api_url
         self.temperature = temperature
         self.structure_limit = structure_limit
@@ -49,56 +49,85 @@ class OllamaContentClient:
             print(f"HTTP 요청 실패: {e}")
             raise RuntimeError(f"Ollama API 요청 실패: {e}")
         
-    async def contents_GEN(self, model : str= "bllossom", input_text = "", section_name=""):
-
+    async def contents_GEN(self, model : str= "solar", input_text = "", section_name=""):
+        
         prompt = f"""
                 <|start_header_id|>system<|end_header_id|>
-                - 너는 사이트의 섹션 구조를 정해주고, 그 안에 들어갈 내용을 작성해주는 도우미야.
-                - 입력 데이터를 기준으로 단일 페이지를 갖는 랜딩사이트 출력 예시를 생성해.
-                - {section_name}섹션에 알맞게 구성하여 컨텐츠를 만들건데, "h1, h2, h3, p" 태그를 이용해서 각 컨텐츠를 구성해줘.
-                - 섹션 안의 콘텐츠의 개수는 섹션의 흐름에 맞게 2~6개 중 자유롭게 선택해서 생성해줘.
+                - 너는 사이트의 섹션 구조를 정해주고, 그 안에 들어갈 내용을 작성해주는 AI 도우미야.
+                - 입력된 데이터를 기준으로 단일 페이지를 갖는 랜딩사이트 콘텐츠를 생성해야 해.
+                - 'children'의 컨텐츠 내용의 수는 너가 생각하기에 섹션에 알맞게 개수를 수정해서 생성해줘.
+                - 섹션 '{section_name}'에 어울리는 내용을 생성해야 하며, 반드시 다음 규칙을 따라야 한다:
+                1. assistant처럼 생성해야하고 형식을을 **절대** 벗어나면 안 된다.
+                2. "div, h1, h2, h3, p, ul, li" 태그만 사용해서 섹션의 콘텐츠를 구성해라.
+                3. 섹션 안의 `children` 안의 컨텐츠 개수는 2~10개 사이에서 자유롭게 선택하되, 내용이 반복되지 않도록 다양하게 생성하라.
+                4. 모든 텍스트 내용은 입력 데이터에 맞게 작성하고, 섹션의 목적과 흐름에 맞춰야 한다.
+                5. 출력 결과는 코드 형태만 허용된다. 코드는 **절대 생성하지 마라.**
+                6. 오직 한글로만 작성하라.
+                
+
                 <|eot_id|><|start_header_id|>user<|end_header_id|>
                 입력 데이터:
                 {input_text}
                 섹션:
                 {section_name}
-                <|eot_id|><|start_header_id|>assistant<|end_header_id|>
-                - 출력 예시의 형식을 벗어나면 절대 안돼.
-                - 안에 있는 text 내용들은 입력 데이터를 기준으로 생성해.
-                - 절대 코드를 생성해서 출력하면 안돼.
-                - 입력데이터와 섹션 구조를 토대로 작업해줘.
-                - 컨텐츠 출력 타입으로는 "h1, h2, h3, p"네가지만 사용해서 생성해줘.
-                - 출력은 한글로만해.
-                출력 예시:
+                
 
-                {{
-                    {{
-                        "type": "LANDING_PAGE",
-                        "children": [
-                                #=========== SECTION_1 ===========#
-                                {{
-                                    "type": "HERO_SECTION", 
-                                    "children": [
-                                        #=========== CONTENT_1 ===========#
-                                        {{
-                                            "type": "h1",
-                                            "text": "사과의 중요성",
-                                        }},
-                                        #=========== CONTENT_2 ===========#
-                                        {{
-                                            "type": "p",
-                                            "text": "토양은 사과 재배에 매우 중요한 요소입니다. 농부는 토양의 pH 수준을 조절하고, 필요시 보충제를 추가하여 적절한 영양소를 공급합니다."
-                                        }}
-                                    ]
-                                }},
-                            ]
-                        }},
-                    ]
-                }}
+                <|eot_id|><|start_header_id|>assistant<|end_header_id|>
+                - 너는 코드 구조 응답만을 반환해야 한다.
+                
                 """
+        # prompt = f"""
+        #         <|start_header_id|>system<|end_header_id|>
+        #         - 너는 사이트의 섹션 구조를 정해주고, 그 안에 들어갈 내용을 작성해주는 AI 도우미야.
+        #         - 입력된 데이터를 기준으로 단일 페이지를 갖는 랜딩사이트 콘텐츠를 생성해야 해.
+        #         - 'children'의 컨텐츠 내용의 수는 너가 생각하기에 섹션에 알맞게 개수를 수정해서 생성해줘.
+        #         - 섹션 '{section_name}'에 어울리는 내용을 생성해야 하며, 반드시 다음 규칙을 따라야 한다:
+        #         1. assistant처럼 생성해야하고 형식을을 **절대** 벗어나면 안 된다.
+        #         2. "h1, h2, h3, p" 태그만 사용해서 섹션의 콘텐츠를 구성해라.
+        #         3. 섹션 안의 `children` 안의 컨텐츠 개수는 2~10개 사이에서 자유롭게 선택하되, 내용이 반복되지 않도록 다양하게 생성하라.
+        #         4. 모든 텍스트 내용은 입력 데이터에 맞게 작성하고, 섹션의 목적과 흐름에 맞춰야 한다.
+        #         5. 출력 결과는 JSON 형태만 허용된다. 코드는 **절대 생성하지 마라.**
+        #         6. 오직 한글로만 작성하라.
+                
+
+        #         <|eot_id|><|start_header_id|>user<|end_header_id|>
+        #         입력 데이터:
+        #         {input_text}
+        #         섹션:
+        #         {section_name}
+                
+
+        #         <|eot_id|><|start_header_id|>assistant<|end_header_id|>
+        #         - 너는 JSON 형태의 응답만을 반환해야 한다. 아래와 같은 형식의 순수 JSON만을 출력해야해.
+        #         {{
+        #             "children": [
+        #                 {{
+        #                     "type": "h1",
+        #                     "text": "섹션의 주요 제목을 입력 데이터에 맞게 작성합니다."
+        #                 }},
+        #                 {{
+        #                     "type": "p",
+        #                     "text": "섹션의 내용을 소개하는 첫 번째 단락입니다. 핵심 메시지를 간결하고 명확하게 작성합니다."
+        #                 }},
+
+        #                 {{
+        #                     "type": "h3",
+        #                     "text": "중요 포인트를 정리하거나 강조합니다."
+        #                 }},
+        #                 {{
+        #                     "type": "p",
+        #                     "text": "설명 내용을 구체적으로 작성하되 중복되지 않도록 주의합니다."
+        #                 }},
+        #                 {{
+        #                     "type": "p",
+        #                     "text": "마무리 문장으로 섹션의 가치를 강조하고 독자의 참여를 유도합니다."
+        #                 }}
+        #             ]
+        #         }}
+        #         """
         return await self.send_request(model, prompt)
     
-    async def landing_block_STD(self, model : str= "bllossom", input_text :str = "", section_name=""):
+    async def landing_block_STD(self, model : str= "solar", input_text :str = "", section_name=""):
         prompt = f"""
             <|start_header_id|>system<|end_header_id|>
             - 당신은 AI 랜딩페이지 콘텐츠 작성 도우미입니다.
@@ -126,7 +155,7 @@ class OllamaContentClient:
                 
         print(f"prompt length : {len(prompt)}")
         return await self.send_request(model, prompt)
-    # async def landing_block_STD(self, model : str= "bllossom", input_text = "", section_name = "", section_num = ""):
+    # async def landing_block_STD(self, model : str= "solar", input_text = "", section_name = "", section_num = ""):
         
     #     chunk = get_embedding_from_ollama(text=input_text)
         
@@ -158,7 +187,7 @@ class OllamaContentClient:
     
     
     
-    # async def LLM_summary(self, input_text: str = "", model="bllossom"):
+    # async def LLM_summary(self, input_text: str = "", model="solar"):
     #     chunk = get_embedding_from_ollama(text=input_text)
         
     #     all_results = []
@@ -213,7 +242,7 @@ class OllamaContentClient:
     #         print(f"LLM_summary Len :  {len(prompt)}")
     #     return await self.send_request(model, prompt)
     
-    async def LLM_content_fill(self, input_text: str = "", model="bllossom", summary = ""):
+    async def LLM_content_fill(self, input_text: str = "", model="solar", summary = ""):
         
         prompt = f"""
                 <|start_header_id|>system<|end_header_id|>
@@ -285,7 +314,7 @@ class OllamaContentClient:
         print(result_json)
         return result_json
     
-    # async def LLM_land_page_content_Gen(self, input_text: str = "", model="bllossom", structure_limit=True):
+    # async def LLM_land_page_content_Gen(self, input_text: str = "", model="solar", structure_limit=True):
     #     cnt = random.randint(6, 9)
     #     print(f"section count: {cnt}")
     #     try:
@@ -342,7 +371,7 @@ class OllamaContentClient:
     #         raise HTTPException(status_code=500, detail="Failed to generate landing page sections.")
 
 
-    async def LLM_land_block_content_Gen(self, input_text : str = "", model = "bllossom", section_name = "", section_num = "1", summary=""):
+    async def LLM_land_block_content_Gen(self, input_text : str = "", model = "solar", section_name = "", section_num = "1", summary=""):
         
         try:
             # 비동기 함수 호출 시 await 사용

@@ -22,12 +22,12 @@ from langchain.vectorstores import Milvus
 from langchain.prompts import PromptTemplate
 from langchain.chains import RetrievalQA
 from pymilvus import connections, Collection, utility
-from typing import AsyncGenerator, List
+from typing import AsyncGenerator, List, Any, Union
 from pydantic import BaseModel
 from typing import Dict
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-import requests, json
+import requests, json, re
 from io import BytesIO
 import time, random
 import torch, gc
@@ -42,7 +42,7 @@ class GenerateRequest(BaseModel):
     input_text: str
     # is_korean: bool
     model: str = "llama3.2"  # Ollama 모델 이름, 기본값은 "default"
-    # model: str = "bllossom"  # Ollama 모델 이름, 기본값은 "default"
+    # model: str = "solar"  # Ollama 모델 이름, 기본값은 "default"
     gen_type: str = "normal"
 # API ENDPOINT 일괄처리 방식
 @app.post("/generate")
@@ -177,7 +177,7 @@ async def generate_RAG(request: GenerateRequest):
         
         # LLM 래퍼 객체 생성
         # ollama_llm = OllamaLLM(client=ollama_client, model_name="llama3.2")
-        ollama_llm = OllamaLLM(client=ollama_client, model_name="bllossom")
+        ollama_llm = OllamaLLM(client=ollama_client, model_name="solar")
 
         # CustomRAGChain 생성
         custom_chain = CustomRAGChain(
@@ -571,14 +571,14 @@ async def generate_menu(path: str, path2: str='', path3: str=''):
 
         # ContentChain에서 결과 생성
         # result = content_chain.run(all_text, discriminant, model='llama3.2', value_type='menu')
-        result = content_chain.run(all_text, discriminant, model='bllossom', value_type='menu')
+        result = content_chain.run(all_text, discriminant, model='solar', value_type='menu')
         print("process end structure")
         # if result['menu_structure']:
         #     menu_content = []
         #     for menu in result['menu_structure']:
         #         context = None
         #         menu_content_dict = {}
-        #         context = content_chain.contents_run(model='bllossom', input_text=all_text, menu=menu)
+        #         context = content_chain.contents_run(model='solar', input_text=all_text, menu=menu)
         #         menu_content_dict[menu] = context
         #         menu_content.append(menu_content_dict)
         #         print(f"menu_content_dict[menu] : {menu_content_dict[menu]}")
@@ -600,7 +600,7 @@ async def generate_menu(path: str, path2: str='', path3: str=''):
 
 class LandPageRequest(BaseModel):
     input_text: str
-    model: str = "bllossom"
+    model: str = "solar"
     
 # 엔드포인트 정의
 @app.post("/generate_land_section")
@@ -632,51 +632,64 @@ async def LLM_land_page_generate(request: LandPageRequest):
         # content = await content_client.contents_GEN(input_text=request.input_text)
         # print(f"Generated content : {content}")
 
-        # STEP 2: 콘텐츠 데이터 생성
-        final_contents = {}
+        main_dict = {"text": "", "type": "LANDING", "children": []}
+
         for section_num, section_name in landing_structure.items():
+            print(f"Processing section {section_num}: {section_name}")
+
+            time.sleep(0.5)
             content = await content_client.contents_GEN(input_text=request.input_text, section_name=section_name)
-            print(f"Processing section: {section_num}, Name: {content}")
-            # section_content = await content_client.landing_block_STD(model="bllossom", input_text=content, section_name=section_name)
-        #     # 섹션별 콘텐츠 생성
-        #     print(f"Contents for {section_name}: {section_content}")
+            content = content.replace("<|start_header_id|>", "").replace("<|end_header_id|>", "").replace("<|eot_id|>", "")
+            
+            print(f"content : {content}")
+            data_dict = json.loads(content)
 
-        #     # 최종 구조에 추가
-        #     final_contents[section_num] = {
-        #         "section_name": section_name,
-        #         "contents_data": section_content
-        #     }
+            # 여기서 main_dict["children"] 대신 data_dict["children"]로부터 type 추출
+            tag_list = [child['type'] for child in data_dict["children"] if 'type' in child]
+            tag = "_".join(tag_list)
 
-        # print(f"Final contents: {final_contents}")
+            data_dict["tag"] = tag
+            data_dict["section_name"] = section_name
 
-        # # STEP 3: 최종 결과 반환
-        # result_dict = {
-        #     "text": "",
-        #     "type": "LANDING",
-        #     "metadata": {},
-        #     "children": [
-        #         {
-        #             "type": "LANDING_PAGE",
-        #             "metadata": {"Key1": "Value", "Key2": "Value"},
-        #             "children": [
-        #                 {"section": key, "name": value["section_name"], "content": value["contents_data"]}
-        #                 for key, value in final_contents.items()
-        #             ]
-        #         }
-        #     ]
-        # }
-        return content
+            # 이제 main_dict에 data_dict를 append
+            main_dict["children"].append(data_dict)
 
-    except json.JSONDecodeError as e:
-        print(f"Invalid JSON format: {e}")
-        raise HTTPException(status_code=500, detail="Failed to parse JSON response.")
+
+        return main_dict
+
     except Exception as e:
         print(f"Error processing landing structure: {e}")
         raise HTTPException(status_code=500, detail="Error processing landing structure.")
 
 
+def extract_json_from_response(response_text: str) -> Union[dict, None]:
+    """
+    주어진 텍스트에서 JSON 형식을 찾아 반환합니다.
+    """
+    try:
+        # '{'로 시작해서 '}'로 끝나는 모든 JSON 형식을 찾음
+    
+        json_pattern = r"(\{.*?\})"
+        matches = re.findall(json_pattern, response_text, re.DOTALL)
+
+        for match in matches:
+            try:
+                # JSON 변환 시도
+                parsed_json = json.loads(match)
+                # 필수 키 검증
+                if "children" in parsed_json:
+                    return parsed_json
+            except json.JSONDecodeError:
+                continue  # JSON 파싱 실패 시 다음으로 넘어감
+
+        print("No valid JSON structure found.")
+        return None
+    except Exception as e:
+        print(f"Error extracting JSON: {e}")
+        return None
+
 # @app.post("/generate_land_section")    
-# async def LLM_land_page_generate(input_text: str = "", model="bllossom", structure_limit=True):
+# async def LLM_land_page_generate(input_text: str = "", model="solar", structure_limit=True):
 #     # Main landing page content generation
 #     content_LLM = OllamaContentClient()
 #     landing_structure = await content_LLM.LLM_land_page_content_Gen(input_text=input_text, model=model, structure_limit=structure_limit)

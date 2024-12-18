@@ -16,8 +16,8 @@ def PDF2TEXT(pdf_list):
             cleaned_text = re.sub(r'\s+', ' ', cleaned_text)
             return cleaned_text
 
-        if num_pages > 20:
-            num_pages = 20
+        # if num_pages > 20:
+        #     num_pages = 20
         extracted_text = ""
         # 모든 페이지 텍스트 추출
         for page_num in range(num_pages):
