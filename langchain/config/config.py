@@ -8,7 +8,7 @@ from pymilvus import connections
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-OLLAMA_IP = os.environ.get("ollama_IP")
+OLLAMA_IP = "172.19.0.6"
 print(f"OLLAMA_IP: {OLLAMA_IP}")
 
 # config.py

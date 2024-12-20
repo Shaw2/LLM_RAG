@@ -8,6 +8,7 @@ from utils.helpers import languagechecker, insert_data, create_collection, searc
 from utils.ollama_embedding import get_embedding_from_ollama, OllamaEmbeddings, embedding_from_ollama
 from utils.ollama_client import OllamaClient, OllamaLLM
 from utils.ollama_content import OllamaContentClient
+from utils.ollama_chat import OllamaChatClient
 from utils.RAGChain import CustomRAGChain
 from utils.PDF2TXT import PDF2TEXT
 from script.prompt import RAG_TEMPLATE, WEB_MENU_TEMPLATE
@@ -608,58 +609,117 @@ async def LLM_land_page_generate(request: LandPageRequest):
     """
     랜딩 페이지 섹션 생성을 처리하는 API 엔드포인트
     """
+    
     try:
         print(f"Start process: {request.input_text}")
         print(f"Model: {request.model}")
         
         # OllamaContentClient와 ConversationHandler 초기화
         content_client = OllamaContentClient()
-
-        # STEP 1: 랜딩 페이지 섹션 구조 생성
-        section_options = ["Introduce", "Solution", "Features", "Social", "CTA", "Pricing", "About Us", "Team", "blog"]
-        section_cnt = random.randint(6, 9)
-        print(f"Selected section count: {section_cnt}")
-
-        # 섹션 고정 및 랜덤 채움
-        section_dict = {1: "Header", 2: "Hero", section_cnt - 1: random.choice(["FAQ", "Map", "Youtube", "Contact", "Support"]), section_cnt: "Footer"}
-        filled_indices = {1, 2, section_cnt - 1, section_cnt}
-        for i in range(3, section_cnt):
-            if i not in filled_indices:
-                section_dict[i] = random.choice(section_options)
-        landing_structure = dict(sorted(section_dict.items()))
         
-        print(f"Generated landing structure: {landing_structure}")
-        # content = await content_client.contents_GEN(input_text=request.input_text)
-        # print(f"Generated content : {content}")
+        # content = await content_client.contents_GEN(input_text=request.input_text, section_name="")
+        content = await content_client.contents_GEN_chat(input_text=request.input_text, section_name="")
+        
+        return content
+        
+        # # STEP 1: 랜딩 페이지 섹션 구조 생성
+        # section_options = ["Introduce", "Solution", "Features", "Social", "CTA", "Pricing", "About Us", "Team", "blog"]
+        # section_cnt = random.randint(6, 9)
+        # print(f"Selected section count: {section_cnt}")
 
-        main_dict = {"text": "", "type": "LANDING", "children": []}
+        # # 섹션 고정 및 랜덤 채움
+        # section_dict = {1: "Header", 2: "Hero", section_cnt - 1: random.choice(["FAQ", "Map", "Youtube", "Contact", "Support"]), section_cnt: "Footer"}
+        # filled_indices = {1, 2, section_cnt - 1, section_cnt}
+        # for i in range(3, section_cnt):
+        #     if i not in filled_indices:
+        #         section_dict[i] = random.choice(section_options)
+        # landing_structure = dict(sorted(section_dict.items()))
+        
+        # print(f"Generated landing structure: {landing_structure}")
+        # # content = await content_client.contents_GEN(input_text=request.input_text)
+        # # print(f"Generated content : {content}")
 
-        for section_num, section_name in landing_structure.items():
-            print(f"Processing section {section_num}: {section_name}")
+        # main_dict = {"text": "", "type": "LANDING", "children": []}
 
-            time.sleep(0.5)
-            content = await content_client.contents_GEN(input_text=request.input_text, section_name=section_name)
-            content = content.replace("<|start_header_id|>", "").replace("<|end_header_id|>", "").replace("<|eot_id|>", "")
+        # for section_num, section_name in landing_structure.items():
+        #     print(f"Processing section {section_num}: {section_name}")
+
+        #     time.sleep(0.5)
+        #     content = await content_client.contents_GEN(input_text=request.input_text, section_name=section_name)
+        #     content = content.replace("<|start_header_id|>", "").replace("<|end_header_id|>", "").replace("<|eot_id|>", "")
             
-            print(f"content : {content}")
-            data_dict = json.loads(content)
+        #     print(f"content : {content}")
+        #     data_dict = json.loads(content)
 
-            # 여기서 main_dict["children"] 대신 data_dict["children"]로부터 type 추출
-            tag_list = [child['type'] for child in data_dict["children"] if 'type' in child]
-            tag = "_".join(tag_list)
+        #     # 여기서 main_dict["children"] 대신 data_dict["children"]로부터 type 추출
+        #     tag_list = [child['type'] for child in data_dict["children"] if 'type' in child]
+        #     tag = "_".join(tag_list)
 
-            data_dict["tag"] = tag
-            data_dict["section_name"] = section_name
+        #     data_dict["tag"] = tag
+        #     data_dict["section_name"] = section_name
 
-            # 이제 main_dict에 data_dict를 append
-            main_dict["children"].append(data_dict)
+        #     # 이제 main_dict에 data_dict를 append
+        #     main_dict["children"].append(data_dict)
 
 
-        return main_dict
+        # return main_dict
 
     except Exception as e:
         print(f"Error processing landing structure: {e}")
         raise HTTPException(status_code=500, detail="Error processing landing structure.")
+    
+    # try:
+    #     print(f"Start process: {request.input_text}")
+    #     print(f"Model: {request.model}")
+        
+    #     # OllamaContentClient와 ConversationHandler 초기화
+    #     content_client = OllamaContentClient()
+
+    #     # STEP 1: 랜딩 페이지 섹션 구조 생성
+    #     section_options = ["Introduce", "Solution", "Features", "Social", "CTA", "Pricing", "About Us", "Team", "blog"]
+    #     section_cnt = random.randint(6, 9)
+    #     print(f"Selected section count: {section_cnt}")
+
+    #     # 섹션 고정 및 랜덤 채움
+    #     section_dict = {1: "Header", 2: "Hero", section_cnt - 1: random.choice(["FAQ", "Map", "Youtube", "Contact", "Support"]), section_cnt: "Footer"}
+    #     filled_indices = {1, 2, section_cnt - 1, section_cnt}
+    #     for i in range(3, section_cnt):
+    #         if i not in filled_indices:
+    #             section_dict[i] = random.choice(section_options)
+    #     landing_structure = dict(sorted(section_dict.items()))
+        
+    #     print(f"Generated landing structure: {landing_structure}")
+    #     # content = await content_client.contents_GEN(input_text=request.input_text)
+    #     # print(f"Generated content : {content}")
+
+    #     main_dict = {"text": "", "type": "LANDING", "children": []}
+
+    #     for section_num, section_name in landing_structure.items():
+    #         print(f"Processing section {section_num}: {section_name}")
+
+    #         time.sleep(0.5)
+    #         content = await content_client.contents_GEN(input_text=request.input_text, section_name=section_name)
+    #         content = content.replace("<|start_header_id|>", "").replace("<|end_header_id|>", "").replace("<|eot_id|>", "")
+            
+    #         print(f"content : {content}")
+    #         data_dict = json.loads(content)
+
+    #         # 여기서 main_dict["children"] 대신 data_dict["children"]로부터 type 추출
+    #         tag_list = [child['type'] for child in data_dict["children"] if 'type' in child]
+    #         tag = "_".join(tag_list)
+
+    #         data_dict["tag"] = tag
+    #         data_dict["section_name"] = section_name
+
+    #         # 이제 main_dict에 data_dict를 append
+    #         main_dict["children"].append(data_dict)
+
+
+    #     return main_dict
+
+    # except Exception as e:
+    #     print(f"Error processing landing structure: {e}")
+    #     raise HTTPException(status_code=500, detail="Error processing landing structure.")
 
 
 def extract_json_from_response(response_text: str) -> Union[dict, None]:
@@ -717,3 +777,34 @@ def extract_json_from_response(response_text: str) -> Union[dict, None]:
 #     except Exception as e:
 #         print(f"Error processing landing structure: {e}")
 #         raise HTTPException(status_code=500, detail="Error processing landing structure.")
+
+# Chat Test
+
+@app.post("/chat_landpage_generate")
+async def chat_landpage_generate(request: LandPageRequest):
+    client = OllamaChatClient()
+    section_options = ["Introduce", "Solution", "Features", "Social", "CTA", "Pricing", "About Us", "Team", "blog"]
+    section_cnt = random.randint(6, 9)
+    print(f"Selected section count: {section_cnt}")
+
+    await client.store_chunks(model=request.model, data=request.input_text)
+    
+    # 섹션 고정 및 랜덤 채움
+    section_dict = {1: "Header", 2: "Hero", section_cnt - 1: random.choice(["FAQ", "Map", "Youtube", "Contact", "Support"]), section_cnt: "Footer"}
+    filled_indices = {1, 2, section_cnt - 1, section_cnt}
+    for i in range(3, section_cnt):
+        if i not in filled_indices:
+            section_dict[i] = random.choice(section_options)
+    landing_structure = dict(sorted(section_dict.items()))
+    
+    
+    print(f"Generated landing structure: {landing_structure}")
+    for section_num, section_name in landing_structure.items():
+            print(f"Processing section {section_num}: {section_name}")
+
+            time.sleep(0.5)
+            # content = await content_client.generate_section(input_text=request.input_text, section_name=section_name)
+            generated_content = await client.generate_section(model=request.model, section_name=section_name)
+            print(f"content : {generated_content}")
+
+    return generated_content

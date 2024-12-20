@@ -107,6 +107,6 @@ docker container prune
 
 docker image prune -a
 
-docker volumn prune -a
+docker volume prune -a
 
 docker compose build --no-cache --progress=plain

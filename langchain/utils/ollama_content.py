@@ -8,7 +8,7 @@ from typing import List
 from utils.ollama_embedding import get_embedding_from_ollama
 
 class OllamaContentClient:
-    def __init__(self, api_url=OLLAMA_API_URL+'api/generate', temperature=0.4, structure_limit = True,  n_ctx = 4196, max_token = 4196):
+    def __init__(self, api_url=OLLAMA_API_URL+'api/chat', temperature=0, structure_limit = True,  n_ctx = 4196, max_token = 4196):
         self.api_url = api_url
         self.temperature = temperature
         self.structure_limit = structure_limit
@@ -22,10 +22,11 @@ class OllamaContentClient:
         
         payload = {
             "model": model,
-            "prompt": prompt,
+            "message": prompt,
             "temperature": self.temperature,
             "n_ctx": self.n_ctx,
-            "repetition penalty":1.2
+            "repetition penalty":1.2,
+            "stream" : False
         }
 
         try:
@@ -34,6 +35,8 @@ class OllamaContentClient:
 
             full_response = response.text  # 전체 응답
             lines = full_response.splitlines()
+            print("lines : ", lines)
+            
             all_text = ""
             for line in lines:
                 try:
@@ -49,33 +52,150 @@ class OllamaContentClient:
             print(f"HTTP 요청 실패: {e}")
             raise RuntimeError(f"Ollama API 요청 실패: {e}")
         
-    async def contents_GEN(self, model : str= "solar", input_text = "", section_name=""):
+    async def contents_GEN_chat(self, model : str= "solar", input_text = "", section_name=""):
+
+        message = [
+                        {
+                        "role": "system",
+                        "content" : "너는 단일 페이지로 구성된 랜딩 사이트에 들어갈 내용을 작성해주는 AI 도우미야.",
+                        "role" : "user",
+                        "content" : input_text
+                        }
+                    ]
+        response_user = await self.send_request(model, [message])
+        print(f"User response: {response_user}")
         
-        prompt = f"""
+        return response_user.strip()        
+        # return await self.send_request(model, message)
+    
+    async def contents_GEN(self, model : str= "solar", input_text = "", section_name=""):
+                # 1. assistant처럼 생성해야하고 형식을을 **절대** 벗어나면 안 된다.
+                # 6. 출력 결과는 코드 형태만 허용된다. 코드는 **절대 생성하지 마라.**
+                # 7. 오직 한글로만 작성하라.
+                # - 섹션의 갯 수는 PDF 데이터의 구성을 고려해서 결정해줘.
+                # - 입력된 PDF 데이터의 구성과 섹션의 순서를 함께 고려해서, 섹션에 들어갈 수 있게 데이터를 만들어줘.
+                # 2. "html, body, header, footer, section" 태그는 사용하지 않는다.
+
+        prompt = f""" 
                 <|start_header_id|>system<|end_header_id|>
-                - 너는 사이트의 섹션 구조를 정해주고, 그 안에 들어갈 내용을 작성해주는 AI 도우미야.
-                - 입력된 데이터를 기준으로 단일 페이지를 갖는 랜딩사이트 콘텐츠를 생성해야 해.
-                - 'children'의 컨텐츠 내용의 수는 너가 생각하기에 섹션에 알맞게 개수를 수정해서 생성해줘.
-                - 섹션 '{section_name}'에 어울리는 내용을 생성해야 하며, 반드시 다음 규칙을 따라야 한다:
-                1. assistant처럼 생성해야하고 형식을을 **절대** 벗어나면 안 된다.
-                2. "div, h1, h2, h3, p, ul, li" 태그만 사용해서 섹션의 콘텐츠를 구성해라.
-                3. 섹션 안의 `children` 안의 컨텐츠 개수는 2~10개 사이에서 자유롭게 선택하되, 내용이 반복되지 않도록 다양하게 생성하라.
-                4. 모든 텍스트 내용은 입력 데이터에 맞게 작성하고, 섹션의 목적과 흐름에 맞춰야 한다.
-                5. 출력 결과는 코드 형태만 허용된다. 코드는 **절대 생성하지 마라.**
-                6. 오직 한글로만 작성하라.
+                - 너는 단일 페이지로 구성된 랜딩 사이트에 들어갈 내용을 작성해주는 AI 도우미야.
+                - 섹션은 6~10개 사이로 자유롭게 구성해줘. 대신 랜딩페이지의 기본적인 골격에 벗어나지 않아야 해.
+                - 섹션에 어울리는 내용을 생성해야 하며, 반드시 다음 규칙을 따라야 한다:
+                    1. "div, h1, h2, h3, p, ul, li" 태그만 사용해서 섹션의 콘텐츠를 구성한다.
+                    2. 섹션 안의 컨텐츠 개수는 2~10개 사이에서 자유롭게 선택한다.
+                    3. '생성 예시'를 그대로 사용하지 않으며, 사용자 input을 고려하여 내용이 반복되지 않도록 다양하게 생성한다.
+                    4. 모든 텍스트 내용은 입력 데이터에 맞게 작성하고, 섹션의 목적과 흐름에 맞춰야 한다.
+                    5. 태그를 제외한 내용은 오직 한글로만 작성한다.
+                    
+                - 한글로 작성했는지 다시 한 번 확인해서. 한글로 출력한다.
                 
+                **생성 예시**
+                '''
+                <div class="HEADER_SECTION">                                                                                                                                     
+                    <h1>회사 이름 혹은 제품 이름</h1>
+                    <p>회사 소개 혹은 제품 소개</p>
+                </div>																																						    
+                <div class="CTA_SECTION">                                                                                                                               
+                    <h1>서비스 소개</h1>
+                    <p><a href="">바로 가기</a></p>
+                </div>
+                <div class="FEATURES_SECTION">
+                    <h3>서비스 강점</h3>
+                    <h1>서비스 주요 특징</h1>
+                    <p>서비스 주요 특징 설명</p>
+                    <ul>                                                                                                                                 
+                        <li>
+                            <h2>특징 1</h2>
+                            <p>특징 1에 대한 설명</p>
+                        </li>
+                        <li>
+                            <h2>특징 2</h2>
+                            <p>특징 2에 대한 설명</p>
+                        </li>
+                        <li>
+                            <h2>특징 3</h2>
+                            <p>특징 3에 대한 설명</p>
+                        </li>
+                    </ul>
+                </div>
+                <div class="PRICING_SECTION">                                                                                                                   
+                    <h3>가격 경쟁력 포인트</h3>
+                    <p>서비스 가격 소개</p>
+                </div>
+                <div class="FOOTER_SECTION">                                                                                                                                
+                    <h1>서비스 다시 소개</h1>
+                    <p><a href="">바로 가기</a></p>
+                </div>
+                '''
 
                 <|eot_id|><|start_header_id|>user<|end_header_id|>
                 입력 데이터:
                 {input_text}
                 섹션:
                 {section_name}
-                
+
 
                 <|eot_id|><|start_header_id|>assistant<|end_header_id|>
-                - 너는 코드 구조 응답만을 반환해야 한다.
-                
+
                 """
+
+
+        # prompt = f"""
+        #         <|start_header_id|>system<|end_header_id|>
+        #         - 너는 사이트의 섹션 구조를 정해주고, 그 안에 들어갈 내용을 작성해주는 AI 도우미야.
+        #         - 입력된 데이터를 기준으로 단일 페이지를 갖는 랜딩사이트 콘텐츠를 생성해야 해.
+        #         - 'children'의 컨텐츠 내용의 수는 너가 생각하기에 섹션에 알맞게 개수를 수정해서 생성해줘.
+        #         - 섹션 '{section_name}'에 어울리는 내용을 생성해야 하며, 반드시 다음 규칙을 따라야 한다:
+                
+        #         1. "div, h1, h2, h3, p, ul, li" 태그만 사용해서 섹션의 콘텐츠를 구성해라.
+        #         2. "html, body, header, footer, section" 태그는 사용하지 않는다.
+        #         3. 섹션 안의 `children` 안의 컨텐츠 개수는 2~10개 사이에서 자유롭게 선택하되, 내용이 반복되지 않도록 다양하게 생성하라.
+        #         4. 모든 텍스트 내용은 입력 데이터에 맞게 작성하고, 섹션의 목적과 흐름에 맞춰야 한다.
+        #         5. 태그를 제외한 내용은 오직 한글로만 작성하라.
+                
+        #         **생성 예시**
+        #         ```
+        #             <div class="HEADER_SECTION">
+        #             <h2>Our Eco-Friendly Products</h2>
+        #             <ul>
+        #                 <li><a href="#solar-panels">Solar Panels</a></li>
+        #                 <li><a href="#energy-efficient-appliances">Energy Efficient Appliances</a></li>
+        #                 <li><a href="#water-saving-devices">Water Saving Devices</a></li>
+        #             </ul>
+        #             <div class="CTA_SECTION">
+        #                 <!-- Solar Panels Section -->
+        #                 <div id="solar-panels">
+        #                 <h3>Solar Panels</h3>
+        #                 <p>Harness the power of the sun with our high-quality solar panels. Not only do they reduce your energy
+        #             bills, but they also minimize your carbon footprint by producing clean, renewable energy.</p>
+        #                 </div>
+        #                 <!-- Energy Efficient Appliances Section -->
+        #                 <div id="energy-efficient-appliances">
+        #                 <h3>Energy Efficient Appliances</h3>
+        #                 <p>Upgrade your appliances with our energy-efficient options. They not only save you money on your utility
+        #             bills but also help conserve natural resources and reduce greenhouse gas emissions.</p>
+        #                 </div>
+        #                 <!-- Water Saving Devices Section -->
+        #                 <div id="water-saving-devices">
+        #                 <h3>Water Saving Devices</h3>
+        #                 <p>Save water and money with our water-saving devices. They help conserve this precious resource and reduce
+        #             the strain on local water systems, all while keeping your bills low.</p>
+        #                 </div>
+        #             </div>
+        #             </div>
+        #         ```
+
+        #         <|eot_id|><|start_header_id|>user<|end_header_id|>
+        #         입력 데이터:
+        #         {input_text}
+        #         섹션:
+        #         {section_name}
+                
+
+        #         <|eot_id|><|start_header_id|>assistant<|end_header_id|>
+                
+                
+        #         """
         # prompt = f"""
         #         <|start_header_id|>system<|end_header_id|>
         #         - 너는 사이트의 섹션 구조를 정해주고, 그 안에 들어갈 내용을 작성해주는 AI 도우미야.

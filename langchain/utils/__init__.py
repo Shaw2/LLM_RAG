@@ -5,3 +5,4 @@ from .RAGChain import  CustomRAGChain
 from .milvus_collection import CONTENTS_COLLECTION_MILVUS_STD
 from .PDF2TXT import PDF2TEXT
 from .ollama_content import OllamaContentClient
+from .ollama_chat import OllamaChatClient
